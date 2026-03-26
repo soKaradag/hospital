@@ -62,7 +62,6 @@
 			<artifactId>mssql-jdbc</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-
 		<!-- Geliştirme sırasında uygulamayı otomatik yeniden başlatıp hızlı geri bildirim sağlar -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
