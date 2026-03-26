@@ -1,5 +1,6 @@
 package com.hospital.hospital.department.repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -15,6 +16,10 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 	// existsByName, Spring Data JPA tarafından otomatik olarak sorguya çevrilir.
 	// Query: SELECT COUNT(*) > 0 FROM departments WHERE name = ?
 	boolean existsByName(String name);
+
+	// Belirli bir isimde bölüm kaydını getirir.
+	// Query: SELECT * FROM departments WHERE name = ?
+	Optional<Department> findByName(String name);
 
 	// Bölüm adı içinde geçen metne göre arama yapar ve sonuçları sayfalayarak getirir.
 	// IgnoreCase, büyük-küçük harf duyarlılığını kaldırır.
