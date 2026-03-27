@@ -50,3 +50,10 @@ Yedinci adımda:
 - observer altyapısı
 
 eklenir ve başarılı veya başarısız iş akışları observer pattern ile event olarak yayımlanır.
+
+Sekizinci adımda:
+- `audit_logs`
+- audit log repository
+- persistent audit observer
+
+eklenir ve audit event'leri veritabanına kalıcı olarak yazılır.
