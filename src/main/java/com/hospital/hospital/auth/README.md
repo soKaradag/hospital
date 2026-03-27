@@ -35,3 +35,10 @@ Beşinci adımda:
 - web config interceptor kaydı
 
 eklenir ve access token çözümleme request girişine taşınır.
+
+Altıncı adımda:
+- `@RequireRole`
+- authorization service
+- forbidden hata akışı
+
+eklenir ve rol kontrolü request girişinde uygulanır.

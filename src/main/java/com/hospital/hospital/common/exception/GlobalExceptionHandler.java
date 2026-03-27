@@ -78,6 +78,12 @@ public class GlobalExceptionHandler {
 				.body(ApiErrorResponse.of(ErrorCode.UNAUTHORIZED, exception.getMessage(), List.of()));
 	}
 
+	@ExceptionHandler(ForbiddenException.class)
+	public ResponseEntity<ApiErrorResponse> handleForbiddenException(ForbiddenException exception) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(ApiErrorResponse.of(ErrorCode.FORBIDDEN, exception.getMessage(), List.of()));
+	}
+
 	/*
 	- Bu handler beklenmeyen tüm hataları son savunma hattı olarak yakalar.
 	- İstemciye teknik detay sızdırmamak için genel bir hata mesajı döndürülür.
