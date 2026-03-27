@@ -45,6 +45,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
+		<!-- Spring Security kurmadan sadece güvenli parola hash yardımcılarını kullanmak için eklenir -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-crypto</artifactId>
+		</dependency>
 		<!-- Veritabanı migrationlarını versiyonlu ve kontrollü şekilde yönetir -->
 		<dependency>
 			<groupId>org.flywaydb</groupId>
