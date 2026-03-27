@@ -42,3 +42,11 @@ Altıncı adımda:
 - forbidden hata akışı
 
 eklenir ve rol kontrolü request girişinde uygulanır.
+
+Yedinci adımda:
+- `@Audit`
+- audit aspect
+- audit publisher
+- observer altyapısı
+
+eklenir ve başarılı veya başarısız iş akışları observer pattern ile event olarak yayımlanır.

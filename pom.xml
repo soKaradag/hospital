@@ -45,6 +45,16 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
+		<!-- Audit aspect yapısının çalışması için Spring AOP desteği eklenir -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+		</dependency>
+		<!-- @Aspect anotasyonlarının runtime'da çalışabilmesi için AspectJ weaver eklenir -->
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
+		</dependency>
 		<!-- Spring Security kurmadan sadece güvenli parola hash yardımcılarını kullanmak için eklenir -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>

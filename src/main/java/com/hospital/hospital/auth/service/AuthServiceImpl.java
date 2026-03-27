@@ -5,6 +5,7 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.auth.context.CurrentUserContext;
 import com.hospital.hospital.auth.dto.AuthTokenResponse;
 import com.hospital.hospital.auth.dto.CurrentUserResponse;
@@ -52,6 +53,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	@Transactional
 	// Login akışı kullanıcıyı bulur, parolayı doğrular, token çifti üretir ve refresh token kaydını kalıcılaştırır.
+	@Audit(action = "LOGIN", entity = "AUTH", description = "User login flow")
 	public AuthTokenResponse login(LoginRequest request) {
 		User user = userRepository.findByUsername(request.getUsername())
 				.orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
@@ -70,6 +72,7 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional
 	// Refresh akışı eski refresh token'ı doğrular, revoke eder ve token rotation ile yeni çift üretir.
 	// Rotation tercih edilmesinin nedeni, çalınmış eski refresh tokenların tekrar kullanılmasını zorlaştırmaktır.
+	@Audit(action = "REFRESH_TOKEN", entity = "AUTH", description = "Refresh token rotation flow")
 	public AuthTokenResponse refresh(RefreshTokenRequest request) {
 		RefreshToken refreshToken = getActiveRefreshToken(request.getRefreshToken());
 		TokenPrincipal principal = parseRefreshToken(request.getRefreshToken());
@@ -89,6 +92,7 @@ public class AuthServiceImpl implements AuthService {
 	@Override
 	@Transactional
 	// Logout işlemi refresh token kaydını iptal eder; böylece yeni access token üretimi engellenir.
+	@Audit(action = "LOGOUT", entity = "AUTH", description = "User logout flow")
 	public void logout(RefreshTokenRequest request) {
 		RefreshToken refreshToken = getActiveRefreshToken(request.getRefreshToken());
 		parseRefreshToken(request.getRefreshToken());
@@ -99,6 +103,7 @@ public class AuthServiceImpl implements AuthService {
 	@Transactional(readOnly = true)
 	// Me akışı interceptor tarafından request context'e yazılmış kullanıcı bilgisi ile çalışır.
 	// Veritabanından tekrar okuma yapılmasının nedeni, token içeriğine körü körüne güvenmek yerine güncel kullanıcı kaydını kullanmaktır.
+	@Audit(action = "GET_CURRENT_USER", entity = "AUTH", description = "Current authenticated user lookup")
 	public CurrentUserResponse me() {
 		if (!currentUserContext.isAuthenticated()) {
 			throw new UnauthorizedException("Authenticated user not found in current request");
