@@ -8,6 +8,7 @@ Bu klasörde Faz 2 için eklenecek MySQL tablo scriptleri bulunur.
 - `03_audit_logs.sql`
 - `04_doctor_schedules.sql`
 - `05_diseases_patient_diseases.sql`
+- `06_encounter_diagnoses_prescriptions.sql`
 
 ## Notlar
 - Tüm `id` alanları `varchar(36)` olarak tutulur.
