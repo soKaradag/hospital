@@ -6,6 +6,7 @@ Bu klasörde Faz 2 için eklenecek MySQL tablo scriptleri bulunur.
 - `01_auth_users.sql`
 - `02_refresh_tokens.sql`
 - `03_audit_logs.sql`
+- `04_doctor_schedules.sql`
 
 ## Notlar
 - Tüm `id` alanları `varchar(36)` olarak tutulur.
