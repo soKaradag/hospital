@@ -7,3 +7,8 @@ Bu alan, Faz 2 ile birlikte eklenecek kimlik doğrulama ve yetkilendirme omurgas
 - `user_info`
 
 model ve repository katmanları eklenir.
+
+İkinci adımda:
+- `refresh_tokens`
+
+model ve repository katmanı eklenir.
