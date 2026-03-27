@@ -12,3 +12,11 @@ model ve repository katmanları eklenir.
 - `refresh_tokens`
 
 model ve repository katmanı eklenir.
+
+Üçüncü adımda:
+- JWT access token üretimi
+- JWT refresh token üretimi
+- token doğrulama
+- token hash desteği
+
+altyapısı eklenir.
