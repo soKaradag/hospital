@@ -2,6 +2,7 @@ package com.hospital.hospital.auth.interceptor;
 
 import java.util.Arrays;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import com.hospital.hospital.auth.context.CurrentUserContext;
 import com.hospital.hospital.auth.annotation.RequireRole;
@@ -24,6 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 - Login ve refresh gibi public endpoint'ler burada hariç tutulur.
 */
 @Component
+@ConditionalOnBean(JwtTokenService.class)
 public class AuthInterceptor implements HandlerInterceptor {
 
 	private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -49,6 +51,12 @@ public class AuthInterceptor implements HandlerInterceptor {
 		}
 
 		if (isPublicAuthEndpoint(request)) {
+			return true;
+		}
+
+		// Bu aşamada auth yalnızca @RequireRole ile işaretlenmiş endpoint'lerde zorunlu tutulur.
+		// Böylece Faz 1'den gelen ve henüz role koruması eklenmemiş endpoint'ler çalışmaya devam eder.
+		if (!hasRoleRequirement(handlerMethod)) {
 			return true;
 		}
 
@@ -78,6 +86,11 @@ public class AuthInterceptor implements HandlerInterceptor {
 		if (requireRole != null && requireRole.value().length > 0) {
 			authorizationService.requireAnyRole(Arrays.copyOf(requireRole.value(), requireRole.value().length));
 		}
+	}
+
+	private boolean hasRoleRequirement(HandlerMethod handlerMethod) {
+		return AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), RequireRole.class) != null
+				|| AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequireRole.class) != null;
 	}
 
 	// Bearer token çıkarma işlemi request girişinde tek yerde yapılır; böylece service katmanı sadeleşir.
