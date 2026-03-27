@@ -5,6 +5,7 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.auth.context.CurrentUserContext;
 import com.hospital.hospital.auth.dto.AuthTokenResponse;
 import com.hospital.hospital.auth.dto.CurrentUserResponse;
 import com.hospital.hospital.auth.dto.LoginRequest;
@@ -24,28 +25,28 @@ import com.hospital.hospital.common.exception.UnauthorizedException;
 /*
 - Auth iş akışlarının uygulama katmanı burada yürütülür.
 - Login, refresh, logout ve me işlemleri controller'dan ayrılarak burada toplanır.
-- Bu adımda henüz merkezi auth interceptor olmadığı için bearer token çözümleme burada yapılır.
 - Refresh token DB üzerinden yönetilir; bu sayede revoke ve rotation davranışı uygulanabilir.
 */
 @Service
 public class AuthServiceImpl implements AuthService {
 
-	private static final String BEARER_PREFIX = "Bearer ";
-
 	private final UserRepository userRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final JwtTokenService jwtTokenService;
 	private final PasswordHashService passwordHashService;
+	private final CurrentUserContext currentUserContext;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
 			RefreshTokenRepository refreshTokenRepository,
 			JwtTokenService jwtTokenService,
-			PasswordHashService passwordHashService) {
+			PasswordHashService passwordHashService,
+			CurrentUserContext currentUserContext) {
 		this.userRepository = userRepository;
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.jwtTokenService = jwtTokenService;
 		this.passwordHashService = passwordHashService;
+		this.currentUserContext = currentUserContext;
 	}
 
 	@Override
@@ -96,10 +97,14 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	@Transactional(readOnly = true)
-	// Me akışı access token'dan kullanıcı kimliğini çözer ve güncel kullanıcı bilgisini veritabanından döner.
+	// Me akışı interceptor tarafından request context'e yazılmış kullanıcı bilgisi ile çalışır.
 	// Veritabanından tekrar okuma yapılmasının nedeni, token içeriğine körü körüne güvenmek yerine güncel kullanıcı kaydını kullanmaktır.
-	public CurrentUserResponse me(String authorizationHeader) {
-		TokenPrincipal principal = parseAccessToken(extractBearerToken(authorizationHeader));
+	public CurrentUserResponse me() {
+		if (!currentUserContext.isAuthenticated()) {
+			throw new UnauthorizedException("Authenticated user not found in current request");
+		}
+
+		TokenPrincipal principal = currentUserContext.getPrincipal();
 		User user = userRepository.findById(principal.userId())
 				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + principal.userId()));
 
@@ -158,23 +163,5 @@ public class AuthServiceImpl implements AuthService {
 		} catch (InvalidTokenException exception) {
 			throw new UnauthorizedException(exception.getMessage());
 		}
-	}
-
-	// Authorization header içinden Bearer token'ı çıkarır.
-	// Bu yardımcı metot controller'ı sade tutar; sonraki adımda merkezi interceptor geldiğinde bu kod kolayca taşınabilir.
-	private String extractBearerToken(String authorizationHeader) {
-		if (authorizationHeader == null || authorizationHeader.isBlank()) {
-			throw new UnauthorizedException("Authorization header is required");
-		}
-
-		if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
-			throw new UnauthorizedException("Authorization header must use Bearer token");
-		}
-
-		String token = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
-		if (token.isBlank()) {
-			throw new UnauthorizedException("Bearer token must not be blank");
-		}
-		return token;
 	}
 }

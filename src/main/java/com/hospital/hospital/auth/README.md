@@ -28,3 +28,10 @@ Dördüncü adımda:
 - `me`
 
 endpoint ve service akışları eklenir.
+
+Beşinci adımda:
+- `CurrentUserContext`
+- auth interceptor
+- web config interceptor kaydı
+
+eklenir ve access token çözümleme request girişine taşınır.

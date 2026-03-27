@@ -16,6 +16,6 @@ public interface AuthService {
 	// Refresh token kaydını iptal ederek logout işlemini tamamlar.
 	void logout(RefreshTokenRequest request);
 
-	// Authorization header içindeki access token ile mevcut kullanıcı bilgisini döner.
-	CurrentUserResponse me(String authorizationHeader);
+	// Request context içine yazılmış access token sahibini kullanarak mevcut kullanıcı bilgisini döner.
+	CurrentUserResponse me();
 }

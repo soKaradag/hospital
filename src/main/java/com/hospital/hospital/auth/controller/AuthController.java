@@ -4,7 +4,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,7 +21,7 @@ import jakarta.validation.Valid;
 - İş kuralı yazmaz; gelen isteği doğrular ve service katmanına yönlendirir.
 - Tüm başarılı cevaplar ortak API standardını korumak için ApiResponse ile sarılır.
 - Faz 2'nin bu adımında access ve refresh token response body içinde döndürülür.
-- Me endpoint'i şimdilik Authorization header üzerinden çalışır; sonraki adımda bu akış merkezi auth katmanına taşınacaktır.
+- Me endpoint'i access token'ı doğrudan okumaz; bu iş artık merkezi auth interceptor tarafından yapılır.
 */
 @Validated
 @RestController
@@ -54,9 +53,9 @@ public class AuthController {
 		return ApiResponse.success("Logout successful", null);
 	}
 
-	// Me endpoint'i access token içinden kullanıcıyı çözüp mevcut oturum sahibini döner.
+	// Me endpoint'i request context'e yazılmış mevcut oturum sahibini döner.
 	@GetMapping("/me")
-	public ApiResponse<CurrentUserResponse> me(@RequestHeader("Authorization") String authorizationHeader) {
-		return ApiResponse.success("Current user retrieved successfully", authService.me(authorizationHeader));
+	public ApiResponse<CurrentUserResponse> me() {
+		return ApiResponse.success("Current user retrieved successfully", authService.me());
 	}
 }
