@@ -15,6 +15,8 @@ public interface AppointmentService {
 
 	AppointmentResponse create(CreateAppointmentRequest request);
 
+	AppointmentResponse createWithProcedure(CreateAppointmentRequest request);
+
 	AppointmentResponse update(UUID id, UpdateAppointmentRequest request);
 
 	AppointmentResponse getById(UUID id);

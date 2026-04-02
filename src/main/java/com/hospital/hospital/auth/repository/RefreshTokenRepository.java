@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.hospital.hospital.auth.model.RefreshToken;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
-
+	//Optional çünkü token hash'i bulunamayabilir.
 	Optional<RefreshToken> findByTokenHash(String tokenHash);
 
 }

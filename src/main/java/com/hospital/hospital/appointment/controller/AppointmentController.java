@@ -20,6 +20,8 @@ import com.hospital.hospital.appointment.dto.AppointmentResponse;
 import com.hospital.hospital.appointment.dto.CreateAppointmentRequest;
 import com.hospital.hospital.appointment.dto.UpdateAppointmentRequest;
 import com.hospital.hospital.appointment.service.AppointmentService;
+import com.hospital.hospital.auth.annotation.RequireRole;
+import com.hospital.hospital.auth.model.Role;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 
@@ -53,6 +55,15 @@ public class AppointmentController {
 	@PostMapping
 	public ApiResponse<AppointmentResponse> create(@Valid @RequestBody CreateAppointmentRequest request) {
 		return ApiResponse.success("Appointment created successfully", appointmentService.create(request));
+	}
+
+	// Bu endpoint stored procedure kullanımını göstermek için ayrı tutulur.
+	// Normal create endpoint'i bozulmadan kalır; böylece iki yaklaşım yan yana anlatılabilir.
+	@PostMapping("/procedure")
+	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST })
+	public ApiResponse<AppointmentResponse> createWithProcedure(@Valid @RequestBody CreateAppointmentRequest request) {
+		return ApiResponse.success("Appointment created successfully with procedure",
+				appointmentService.createWithProcedure(request));
 	}
 
 	//PutMapping Anatasyonu; HTTP PUT isteği ile randevu güncellemek için kullanılır.

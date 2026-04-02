@@ -3,6 +3,7 @@ package com.hospital.hospital.appointment.service;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import com.hospital.hospital.appointment.dto.CreateAppointmentRequest;
 import com.hospital.hospital.appointment.dto.UpdateAppointmentRequest;
 import com.hospital.hospital.appointment.mapper.AppointmentMapper;
 import com.hospital.hospital.appointment.model.Appointment;
+import com.hospital.hospital.appointment.repository.AppointmentProcedureRepository;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
@@ -53,6 +55,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 	- Bu kullanım memory leak oluşturmaz; çünkü burada gereksiz nesne biriktirilmez, sadece yönetilen bean referansları tutulur.
 	*/
 	private final AppointmentRepository appointmentRepository;
+	private final AppointmentProcedureRepository appointmentProcedureRepository;
 	private final PatientRepository patientRepository;
 	private final DoctorRepository doctorRepository;
 	private final AppointmentMapper appointmentMapper;
@@ -66,9 +69,11 @@ public class AppointmentServiceImpl implements AppointmentService {
 	- Bu constructor, sınıfın ihtiyaç duyduğu bağımlılıkları alır.
 	- Bu bağımlılıklar, sınıfın iş mantığını uygulamak için kullanılır.
 	*/
-	public AppointmentServiceImpl(AppointmentRepository appointmentRepository, PatientRepository patientRepository,
+	public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
+			AppointmentProcedureRepository appointmentProcedureRepository, PatientRepository patientRepository,
 			DoctorRepository doctorRepository, AppointmentMapper appointmentMapper) {
 		this.appointmentRepository = appointmentRepository;
+		this.appointmentProcedureRepository = appointmentProcedureRepository;
 		this.patientRepository = patientRepository;
 		this.doctorRepository = doctorRepository;
 		this.appointmentMapper = appointmentMapper;
@@ -97,6 +102,32 @@ public class AppointmentServiceImpl implements AppointmentService {
 		appointment.setPatient(getPatient(request.getPatientId()));
 		appointment.setDoctor(getDoctor(request.getDoctorId()));
 		return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+	}
+
+	@Override
+	@Transactional
+	public AppointmentResponse createWithProcedure(CreateAppointmentRequest request) {
+		validateAppointmentTime(request.getAppointmentDateTime());
+
+		// Procedure çağrısından önce foreign key tarafındaki varlıklar uygulama katmanında doğrulanır.
+		// Böylece veritabanı tarafına daha kontrollü ve anlamlı veri gönderilir.
+		getPatient(request.getPatientId());
+		getDoctor(request.getDoctorId());
+
+		UUID appointmentId = UUID.randomUUID();
+
+		try {
+			boolean conflictFound = appointmentProcedureRepository.createAppointmentIfAvailable(appointmentId, request);
+			if (conflictFound) {
+				throw new BusinessRuleViolationException(
+						"Doctor already has an appointment at the selected date and time");
+			}
+		} catch (DataAccessException exception) {
+			throw new BusinessRuleViolationException(
+					"Appointment procedure is not available. Run phase-3 advanced SQL scripts first.");
+		}
+
+		return appointmentMapper.toResponse(getAppointment(appointmentId));
 	}
 
 	@Override

@@ -161,12 +161,4 @@ public class AuthServiceImpl implements AuthService {
 		}
 	}
 
-	// Access token parse akışı da aynı şekilde istemciye güvenli ve tutarlı bir hata döndürmek için sarılır.
-	private TokenPrincipal parseAccessToken(String token) {
-		try {
-			return jwtTokenService.parseAccessToken(token);
-		} catch (InvalidTokenException exception) {
-			throw new UnauthorizedException(exception.getMessage());
-		}
-	}
 }
