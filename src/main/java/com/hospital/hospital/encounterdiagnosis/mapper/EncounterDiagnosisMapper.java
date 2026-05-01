@@ -31,6 +31,10 @@ public class EncounterDiagnosisMapper {
 
 	// Entity alanlarını dış API için açıklayıcı response modeline dönüştürür.
 	public EncounterDiagnosisResponse toResponse(EncounterDiagnosis encounterDiagnosis) {
+		return toResponse(encounterDiagnosis, 0L);
+	}
+
+	public EncounterDiagnosisResponse toResponse(EncounterDiagnosis encounterDiagnosis, long historyCount) {
 		if (encounterDiagnosis == null) {
 			return null;
 		}
@@ -45,6 +49,7 @@ public class EncounterDiagnosisMapper {
 			response.setDiseaseName(encounterDiagnosis.getDisease().getName());
 		}
 		response.setNotes(encounterDiagnosis.getNotes());
+		response.setHistoryCount(historyCount);
 		response.setCreatedAt(encounterDiagnosis.getCreatedAt());
 		response.setUpdatedAt(encounterDiagnosis.getUpdatedAt());
 		return response;

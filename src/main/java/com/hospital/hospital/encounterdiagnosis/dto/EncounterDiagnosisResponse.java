@@ -11,6 +11,7 @@ public class EncounterDiagnosisResponse {
 	private String diseaseCode;
 	private String diseaseName;
 	private String notes;
+	private long historyCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -60,6 +61,14 @@ public class EncounterDiagnosisResponse {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public long getHistoryCount() {
+		return historyCount;
+	}
+
+	public void setHistoryCount(long historyCount) {
+		this.historyCount = historyCount;
 	}
 
 	public Instant getCreatedAt() {

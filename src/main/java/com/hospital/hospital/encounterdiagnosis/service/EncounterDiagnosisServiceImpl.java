@@ -18,6 +18,8 @@ import com.hospital.hospital.encounterdiagnosis.dto.EncounterDiagnosisResponse;
 import com.hospital.hospital.encounterdiagnosis.dto.UpdateEncounterDiagnosisRequest;
 import com.hospital.hospital.encounterdiagnosis.mapper.EncounterDiagnosisMapper;
 import com.hospital.hospital.encounterdiagnosis.model.EncounterDiagnosis;
+import com.hospital.hospital.encounterdiagnosis.model.EncounterDiagnosisHistory;
+import com.hospital.hospital.encounterdiagnosis.repository.EncounterDiagnosisHistoryRepository;
 import com.hospital.hospital.encounterdiagnosis.repository.EncounterDiagnosisRepository;
 
 /*
@@ -32,16 +34,19 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 	private final EncounterRepository encounterRepository;
 	private final DiseaseRepository diseaseRepository;
 	private final EncounterDiagnosisMapper encounterDiagnosisMapper;
+	private final EncounterDiagnosisHistoryRepository encounterDiagnosisHistoryRepository;
 
 	public EncounterDiagnosisServiceImpl(
 			EncounterDiagnosisRepository encounterDiagnosisRepository,
 			EncounterRepository encounterRepository,
 			DiseaseRepository diseaseRepository,
-			EncounterDiagnosisMapper encounterDiagnosisMapper) {
+			EncounterDiagnosisMapper encounterDiagnosisMapper,
+			EncounterDiagnosisHistoryRepository encounterDiagnosisHistoryRepository) {
 		this.encounterDiagnosisRepository = encounterDiagnosisRepository;
 		this.encounterRepository = encounterRepository;
 		this.diseaseRepository = diseaseRepository;
 		this.encounterDiagnosisMapper = encounterDiagnosisMapper;
+		this.encounterDiagnosisHistoryRepository = encounterDiagnosisHistoryRepository;
 	}
 
 	@Override
@@ -52,7 +57,9 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 		EncounterDiagnosis encounterDiagnosis = encounterDiagnosisMapper.toEntity(request);
 		encounterDiagnosis.setEncounter(getEncounter(request.getEncounterId()));
 		encounterDiagnosis.setDisease(getDisease(request.getDiseaseId()));
-		return encounterDiagnosisMapper.toResponse(encounterDiagnosisRepository.save(encounterDiagnosis));
+		EncounterDiagnosis savedEncounterDiagnosis = encounterDiagnosisRepository.save(encounterDiagnosis);
+		appendHistory(savedEncounterDiagnosis);
+		return toResponse(savedEncounterDiagnosis);
 	}
 
 	@Override
@@ -64,21 +71,23 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 		encounterDiagnosisMapper.updateEntity(request, encounterDiagnosis);
 		encounterDiagnosis.setEncounter(getEncounter(request.getEncounterId()));
 		encounterDiagnosis.setDisease(getDisease(request.getDiseaseId()));
-		return encounterDiagnosisMapper.toResponse(encounterDiagnosisRepository.save(encounterDiagnosis));
+		EncounterDiagnosis savedEncounterDiagnosis = encounterDiagnosisRepository.save(encounterDiagnosis);
+		appendHistory(savedEncounterDiagnosis);
+		return toResponse(savedEncounterDiagnosis);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tekil teşhis kaydını bulup response modeline dönüştürür.
 	public EncounterDiagnosisResponse getById(UUID id) {
-		return encounterDiagnosisMapper.toResponse(getEncounterDiagnosis(id));
+		return toResponse(getEncounterDiagnosis(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tüm teşhis kayıtlarını sayfalı şekilde listeler.
 	public Page<EncounterDiagnosisResponse> getAll(Pageable pageable) {
-		return encounterDiagnosisRepository.findAll(pageable).map(encounterDiagnosisMapper::toResponse);
+		return encounterDiagnosisRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -87,7 +96,7 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 	public Page<EncounterDiagnosisResponse> getAllByEncounter(UUID encounterId, Pageable pageable) {
 		getEncounter(encounterId);
 		return encounterDiagnosisRepository.findAllByEncounterId(encounterId, pageable)
-				.map(encounterDiagnosisMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	@Override
@@ -96,7 +105,7 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 	public Page<EncounterDiagnosisResponse> getAllByDisease(UUID diseaseId, Pageable pageable) {
 		getDisease(diseaseId);
 		return encounterDiagnosisRepository.findAllByDiseaseId(diseaseId, pageable)
-				.map(encounterDiagnosisMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	// Encounter teşhis kaydını tek noktadan bulur; bulunamazsa ortak not found hatası üretir.
@@ -115,5 +124,19 @@ public class EncounterDiagnosisServiceImpl implements EncounterDiagnosisService 
 	private Disease getDisease(UUID id) {
 		return diseaseRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Disease not found: " + id));
+	}
+
+	private void appendHistory(EncounterDiagnosis encounterDiagnosis) {
+		EncounterDiagnosisHistory history = new EncounterDiagnosisHistory();
+		history.setEncounterDiagnosis(encounterDiagnosis);
+		history.setDisease(encounterDiagnosis.getDisease());
+		history.setNotes(encounterDiagnosis.getNotes());
+		history.setRevisedAt(java.time.Instant.now());
+		encounterDiagnosisHistoryRepository.save(history);
+	}
+
+	private EncounterDiagnosisResponse toResponse(EncounterDiagnosis encounterDiagnosis) {
+		long historyCount = encounterDiagnosisHistoryRepository.countByEncounterDiagnosisId(encounterDiagnosis.getId());
+		return encounterDiagnosisMapper.toResponse(encounterDiagnosis, historyCount);
 	}
 }
