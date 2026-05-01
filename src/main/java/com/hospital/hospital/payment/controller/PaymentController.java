@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.payment.dto.CreatePaymentRequest;
@@ -39,6 +41,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/payments")
+@RequirePermission(PermissionCodes.PAYMENTS_READ)
 public class PaymentController {
 
 	private final PaymentService paymentService;
@@ -49,12 +52,14 @@ public class PaymentController {
 
 	// PostMapping anotasyonu; HTTP POST isteği ile yeni ödeme kaydı oluşturmak için kullanılır.
 	@PostMapping
+	@RequirePermission(PermissionCodes.PAYMENTS_WRITE)
 	public ApiResponse<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
 		return ApiResponse.success("Payment created successfully", paymentService.create(request));
 	}
 
 	// PutMapping anotasyonu; HTTP PUT isteği ile mevcut ödeme kaydını güncellemek için kullanılır.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.PAYMENTS_WRITE)
 	public ApiResponse<PaymentResponse> update(@PathVariable UUID id,
 			@Valid @RequestBody UpdatePaymentRequest request) {
 		return ApiResponse.success("Payment updated successfully", paymentService.update(id, request));

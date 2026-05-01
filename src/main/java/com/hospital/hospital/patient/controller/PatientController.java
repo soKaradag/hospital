@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.patient.dto.CreatePatientRequest;
@@ -37,6 +39,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/patients")
+@RequirePermission(PermissionCodes.PATIENTS_READ)
 public class PatientController {
 
 	private final PatientService patientService;
@@ -47,12 +50,14 @@ public class PatientController {
 
 	// PostMapping anotasyonu; HTTP POST isteği ile yeni hasta kaydı oluşturmak için kullanılır.
 	@PostMapping
+	@RequirePermission(PermissionCodes.PATIENTS_WRITE)
 	public ApiResponse<PatientResponse> create(@Valid @RequestBody CreatePatientRequest request) {
 		return ApiResponse.success("Patient created successfully", patientService.create(request));
 	}
 
 	// PutMapping anotasyonu; HTTP PUT isteği ile mevcut hasta kaydını güncellemek için kullanılır.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.PATIENTS_WRITE)
 	public ApiResponse<PatientResponse> update(@PathVariable UUID id,
 			@Valid @RequestBody UpdatePatientRequest request) {
 		return ApiResponse.success("Patient updated successfully", patientService.update(id, request));

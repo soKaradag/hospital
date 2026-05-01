@@ -20,8 +20,8 @@ import com.hospital.hospital.appointment.dto.AppointmentResponse;
 import com.hospital.hospital.appointment.dto.CreateAppointmentRequest;
 import com.hospital.hospital.appointment.dto.UpdateAppointmentRequest;
 import com.hospital.hospital.appointment.service.AppointmentService;
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 
@@ -42,6 +42,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/appointments")
+@RequirePermission(PermissionCodes.APPOINTMENTS_READ)
 public class AppointmentController {
 
 	private final AppointmentService appointmentService;
@@ -53,6 +54,7 @@ public class AppointmentController {
 	//PostMapping Anatasyonu; HTTP POST isteği ile randevu oluşturmak için kullanılır.
 	//Post isteği yeni bir kaynak oluşturmak için kullanılır.
 	@PostMapping
+	@RequirePermission(PermissionCodes.APPOINTMENTS_WRITE)
 	public ApiResponse<AppointmentResponse> create(@Valid @RequestBody CreateAppointmentRequest request) {
 		return ApiResponse.success("Appointment created successfully", appointmentService.create(request));
 	}
@@ -60,7 +62,7 @@ public class AppointmentController {
 	// Bu endpoint stored procedure kullanımını göstermek için ayrı tutulur.
 	// Normal create endpoint'i bozulmadan kalır; böylece iki yaklaşım yan yana anlatılabilir.
 	@PostMapping("/procedure")
-	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST })
+	@RequirePermission(PermissionCodes.APPOINTMENTS_WRITE)
 	public ApiResponse<AppointmentResponse> createWithProcedure(@Valid @RequestBody CreateAppointmentRequest request) {
 		return ApiResponse.success("Appointment created successfully with procedure",
 				appointmentService.createWithProcedure(request));
@@ -69,6 +71,7 @@ public class AppointmentController {
 	//PutMapping Anatasyonu; HTTP PUT isteği ile randevu güncellemek için kullanılır.
 	//Put isteği mevcut bir kaynağı güncellemek için kullanılır.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.APPOINTMENTS_WRITE)
 	public ApiResponse<AppointmentResponse> update(@PathVariable UUID id,
 			@Valid @RequestBody UpdateAppointmentRequest request) {
 		return ApiResponse.success("Appointment updated successfully", appointmentService.update(id, request));

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.doctor.dto.CreateDoctorRequest;
@@ -38,6 +40,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/doctors")
+@RequirePermission(PermissionCodes.DOCTORS_READ)
 public class DoctorController {
 
 	private final DoctorService doctorService;
@@ -48,12 +51,14 @@ public class DoctorController {
 
 	// PostMapping anotasyonu; HTTP POST isteği ile yeni doktor kaydı oluşturmak için kullanılır.
 	@PostMapping
+	@RequirePermission(PermissionCodes.DOCTORS_WRITE)
 	public ApiResponse<DoctorResponse> create(@Valid @RequestBody CreateDoctorRequest request) {
 		return ApiResponse.success("Doctor created successfully", doctorService.create(request));
 	}
 
 	// PutMapping anotasyonu; HTTP PUT isteği ile mevcut doktor kaydını güncellemek için kullanılır.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.DOCTORS_WRITE)
 	public ApiResponse<DoctorResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateDoctorRequest request) {
 		return ApiResponse.success("Doctor updated successfully", doctorService.update(id, request));
 	}

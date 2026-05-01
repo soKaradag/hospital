@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.reporting.dto.DoctorWorkloadReportResponse;
 import com.hospital.hospital.reporting.dto.PatientPaymentSummaryResponse;
@@ -27,7 +27,7 @@ import jakarta.validation.constraints.Min;
 @Validated
 @RestController
 @RequestMapping("/api/reports")
-@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST, Role.CASHIER, Role.NURSE })
+@RequirePermission(PermissionCodes.REPORTS_READ)
 public class ReportingController {
 
 	private final ReportingService reportingService;

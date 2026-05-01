@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
+import com.hospital.hospital.auth.annotation.RequirePermission;
 import com.hospital.hospital.auth.dto.AuthTokenResponse;
 import com.hospital.hospital.auth.dto.CurrentUserResponse;
 import com.hospital.hospital.auth.dto.LoginRequest;
 import com.hospital.hospital.auth.dto.RefreshTokenRequest;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.auth.service.AuthService;
 import com.hospital.hospital.common.dto.ApiResponse;
 
@@ -50,7 +50,7 @@ public class AuthController {
 
 	// Logout endpoint'i refresh token kaydını iptal ederek oturum yenilemeyi durdurur.
 	@PostMapping("/logout")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST, Role.CASHIER, Role.NURSE })
+	@RequirePermission(PermissionCodes.AUTH_WRITE)
 	public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
 		authService.logout(request);
 		return ApiResponse.success("Logout successful", null);
@@ -58,7 +58,7 @@ public class AuthController {
 
 	// Me endpoint'i request context'e yazılmış mevcut oturum sahibini döner.
 	@GetMapping("/me")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.RECEPTIONIST, Role.CASHIER, Role.NURSE })
+	@RequirePermission(PermissionCodes.AUTH_READ)
 	public ApiResponse<CurrentUserResponse> me() {
 		return ApiResponse.success("Current user retrieved successfully", authService.me());
 	}

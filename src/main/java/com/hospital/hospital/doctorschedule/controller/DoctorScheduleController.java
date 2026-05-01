@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.doctorschedule.dto.CreateDoctorScheduleRequest;
@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/doctor-schedules")
+@RequirePermission(PermissionCodes.DOCTOR_SCHEDULES_READ)
 public class DoctorScheduleController {
 
 	private final DoctorScheduleService doctorScheduleService;
@@ -42,13 +43,13 @@ public class DoctorScheduleController {
 	}
 
 	@PostMapping
-	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST })
+	@RequirePermission(PermissionCodes.DOCTOR_SCHEDULES_WRITE)
 	public ApiResponse<DoctorScheduleResponse> create(@Valid @RequestBody CreateDoctorScheduleRequest request) {
 		return ApiResponse.success("Doctor schedule created successfully", doctorScheduleService.create(request));
 	}
 
 	@PutMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST })
+	@RequirePermission(PermissionCodes.DOCTOR_SCHEDULES_WRITE)
 	public ApiResponse<DoctorScheduleResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateDoctorScheduleRequest request) {
@@ -56,13 +57,11 @@ public class DoctorScheduleController {
 	}
 
 	@GetMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST, Role.DOCTOR, Role.NURSE })
 	public ApiResponse<DoctorScheduleResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Doctor schedule retrieved successfully", doctorScheduleService.getById(id));
 	}
 
 	@GetMapping
-	@RequireRole({ Role.ADMIN, Role.RECEPTIONIST, Role.DOCTOR, Role.NURSE })
 	public ApiResponse<PageResponse<DoctorScheduleResponse>> getAll(
 			@RequestParam(required = false) UUID doctorId,
 			@RequestParam(required = false) DayOfWeek dayOfWeek,

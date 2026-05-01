@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import com.hospital.hospital.auth.annotation.RequirePermission;
 import com.hospital.hospital.auth.context.CurrentUserContext;
-import com.hospital.hospital.auth.annotation.RequireRole;
 import com.hospital.hospital.auth.service.AuthorizationService;
 import com.hospital.hospital.auth.token.InvalidTokenException;
 import com.hospital.hospital.auth.token.JwtTokenService;
@@ -54,9 +54,8 @@ public class AuthInterceptor implements HandlerInterceptor {
 			return true;
 		}
 
-		// Bu aşamada auth yalnızca @RequireRole ile işaretlenmiş endpoint'lerde zorunlu tutulur.
-		// Böylece Faz 1'den gelen ve henüz role koruması eklenmemiş endpoint'ler çalışmaya devam eder.
-		if (!hasRoleRequirement(handlerMethod)) {
+		// Bu aşamada auth yalnızca @RequirePermission ile işaretlenmiş endpoint'lerde zorunlu tutulur.
+		if (!hasPermissionRequirement(handlerMethod)) {
 			return true;
 		}
 
@@ -79,18 +78,23 @@ public class AuthInterceptor implements HandlerInterceptor {
 
 	// Annotation method seviyesinde aranır; bulunmazsa class seviyesindeki kural kullanılır.
 	private void authorizeIfRequired(HandlerMethod handlerMethod) {
-		RequireRole requireRole = AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), RequireRole.class);
-		if (requireRole == null) {
-			requireRole = AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequireRole.class);
+		RequirePermission requirePermission = AnnotatedElementUtils.findMergedAnnotation(
+				handlerMethod.getMethod(),
+				RequirePermission.class);
+		if (requirePermission == null) {
+			requirePermission = AnnotatedElementUtils.findMergedAnnotation(
+					handlerMethod.getBeanType(),
+					RequirePermission.class);
 		}
-		if (requireRole != null && requireRole.value().length > 0) {
-			authorizationService.requireAnyRole(Arrays.copyOf(requireRole.value(), requireRole.value().length));
+		if (requirePermission != null && requirePermission.value().length > 0) {
+			authorizationService.requireAnyPermission(
+					Arrays.copyOf(requirePermission.value(), requirePermission.value().length));
 		}
 	}
 
-	private boolean hasRoleRequirement(HandlerMethod handlerMethod) {
-		return AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), RequireRole.class) != null
-				|| AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequireRole.class) != null;
+	private boolean hasPermissionRequirement(HandlerMethod handlerMethod) {
+		return AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), RequirePermission.class) != null
+				|| AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequirePermission.class) != null;
 	}
 
 	// Bearer token çıkarma işlemi request girişinde tek yerde yapılır; böylece service katmanı sadeleşir.

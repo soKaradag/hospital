@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.department.dto.CreateDepartmentRequest;
@@ -37,6 +39,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/departments")
+@RequirePermission(PermissionCodes.DEPARTMENTS_READ)
 public class DepartmentController {
 
 	private final DepartmentService departmentService;
@@ -48,6 +51,7 @@ public class DepartmentController {
 	// PostMapping anotasyonu; HTTP POST isteği ile yeni bölüm oluşturmak için kullanılır.
 	// @Valid ve @RequestBody birlikte kullanılarak request body'si doğrulanır ve nesneye çevrilir.
 	@PostMapping
+	@RequirePermission(PermissionCodes.DEPARTMENTS_WRITE)
 	public ApiResponse<DepartmentResponse> create(@Valid @RequestBody CreateDepartmentRequest request) {
 		return ApiResponse.success("Department created successfully", departmentService.create(request));
 	}
@@ -55,6 +59,7 @@ public class DepartmentController {
 	// PutMapping anotasyonu; HTTP PUT isteği ile mevcut bölüm kaydını güncellemek için kullanılır.
 	// PathVariable içindeki id, güncellenecek kaynağın kimliğini temsil eder.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.DEPARTMENTS_WRITE)
 	public ApiResponse<DepartmentResponse> update(@PathVariable UUID id,
 			@Valid @RequestBody UpdateDepartmentRequest request) {
 		return ApiResponse.success("Department updated successfully", departmentService.update(id, request));

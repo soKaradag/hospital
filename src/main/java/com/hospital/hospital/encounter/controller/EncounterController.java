@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.encounter.dto.CreateEncounterRequest;
@@ -40,6 +42,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/encounters")
+@RequirePermission(PermissionCodes.ENCOUNTERS_READ)
 public class EncounterController {
 
 	private final EncounterService encounterService;
@@ -50,12 +53,14 @@ public class EncounterController {
 
 	// PostMapping anotasyonu; HTTP POST isteği ile yeni muayene kaydı oluşturmak için kullanılır.
 	@PostMapping
+	@RequirePermission(PermissionCodes.ENCOUNTERS_WRITE)
 	public ApiResponse<EncounterResponse> create(@Valid @RequestBody CreateEncounterRequest request) {
 		return ApiResponse.success("Encounter created successfully", encounterService.create(request));
 	}
 
 	// PutMapping anotasyonu; HTTP PUT isteği ile mevcut muayene kaydını güncellemek için kullanılır.
 	@PutMapping("/{id}")
+	@RequirePermission(PermissionCodes.ENCOUNTERS_WRITE)
 	public ApiResponse<EncounterResponse> update(@PathVariable UUID id,
 			@Valid @RequestBody UpdateEncounterRequest request) {
 		return ApiResponse.success("Encounter updated successfully", encounterService.update(id, request));

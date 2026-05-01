@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.disease.dto.CreateDiseaseRequest;
@@ -34,6 +34,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/diseases")
+@RequirePermission(PermissionCodes.DISEASES_READ)
 public class DiseaseController {
 
 	private final DiseaseService diseaseService;
@@ -44,28 +45,26 @@ public class DiseaseController {
 
 	// Yeni hastalık katalog kaydı oluşturur.
 	@PostMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR })
+	@RequirePermission(PermissionCodes.DISEASES_WRITE)
 	public ApiResponse<DiseaseResponse> create(@Valid @RequestBody CreateDiseaseRequest request) {
 		return ApiResponse.success("Disease created successfully", diseaseService.create(request));
 	}
 
 	// Mevcut hastalık katalog kaydını günceller.
 	@PutMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR })
+	@RequirePermission(PermissionCodes.DISEASES_WRITE)
 	public ApiResponse<DiseaseResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateDiseaseRequest request) {
 		return ApiResponse.success("Disease updated successfully", diseaseService.update(id, request));
 	}
 
 	// Tekil hastalık kaydını kimliğine göre getirir.
 	@GetMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<DiseaseResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Disease retrieved successfully", diseaseService.getById(id));
 	}
 
 	// Bu endpoint hem sayfalı listeleme hem de kod/ad bazlı aramayı tek noktadan yönetir.
 	@GetMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PageResponse<DiseaseResponse>> getAll(
 			@RequestParam(required = false) String search,
 			@PageableDefault(size = 20) Pageable pageable) {

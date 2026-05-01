@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.prescription.dto.CreatePrescriptionRequest;
@@ -35,6 +35,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/prescriptions")
+@RequirePermission(PermissionCodes.PRESCRIPTIONS_READ)
 public class PrescriptionController {
 
 	private final PrescriptionService prescriptionService;
@@ -45,14 +46,14 @@ public class PrescriptionController {
 
 	// Yeni reçete üst kaydı oluşturur.
 	@PostMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR })
+	@RequirePermission(PermissionCodes.PRESCRIPTIONS_WRITE)
 	public ApiResponse<PrescriptionResponse> create(@Valid @RequestBody CreatePrescriptionRequest request) {
 		return ApiResponse.success("Prescription created successfully", prescriptionService.create(request));
 	}
 
 	// Mevcut reçete kaydını günceller.
 	@PutMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR })
+	@RequirePermission(PermissionCodes.PRESCRIPTIONS_WRITE)
 	public ApiResponse<PrescriptionResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdatePrescriptionRequest request) {
@@ -61,14 +62,12 @@ public class PrescriptionController {
 
 	// Tekil reçete kaydını getirir.
 	@GetMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PrescriptionResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Prescription retrieved successfully", prescriptionService.getById(id));
 	}
 
 	// Bu endpoint tüm reçeteleri veya encounter/patient/doctor/tarih filtresiyle alt kümeleri sayfalı şekilde döner.
 	@GetMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PageResponse<PrescriptionResponse>> getAll(
 			@RequestParam(required = false) UUID encounterId,
 			@RequestParam(required = false) UUID patientId,

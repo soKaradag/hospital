@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.encounterdiagnosis.dto.CreateEncounterDiagnosisRequest;
@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/encounter-diagnoses")
+@RequirePermission(PermissionCodes.ENCOUNTER_DIAGNOSES_READ)
 public class EncounterDiagnosisController {
 
 	private final EncounterDiagnosisService encounterDiagnosisService;
@@ -43,14 +44,14 @@ public class EncounterDiagnosisController {
 
 	// Belirli bir encounter için yeni teşhis kaydı oluşturur.
 	@PostMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE })
+	@RequirePermission(PermissionCodes.ENCOUNTER_DIAGNOSES_WRITE)
 	public ApiResponse<EncounterDiagnosisResponse> create(@Valid @RequestBody CreateEncounterDiagnosisRequest request) {
 		return ApiResponse.success("Encounter diagnosis created successfully", encounterDiagnosisService.create(request));
 	}
 
 	// Mevcut encounter teşhis kaydını günceller.
 	@PutMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE })
+	@RequirePermission(PermissionCodes.ENCOUNTER_DIAGNOSES_WRITE)
 	public ApiResponse<EncounterDiagnosisResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateEncounterDiagnosisRequest request) {
@@ -59,14 +60,12 @@ public class EncounterDiagnosisController {
 
 	// Tekil encounter teşhis kaydını getirir.
 	@GetMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<EncounterDiagnosisResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Encounter diagnosis retrieved successfully", encounterDiagnosisService.getById(id));
 	}
 
 	// Bu endpoint tüm teşhis kayıtlarını veya encounter/disease filtresiyle alt kümeleri sayfalı şekilde döner.
 	@GetMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PageResponse<EncounterDiagnosisResponse>> getAll(
 			@RequestParam(required = false) UUID encounterId,
 			@RequestParam(required = false) UUID diseaseId,

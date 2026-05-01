@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.hospital.auth.annotation.RequireRole;
-import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.annotation.RequirePermission;
+import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.common.dto.PageResponse;
 import com.hospital.hospital.patientdisease.dto.CreatePatientDiseaseRequest;
@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 @Validated
 @RestController
 @RequestMapping("/api/patient-diseases")
+@RequirePermission(PermissionCodes.PATIENT_DISEASES_READ)
 public class PatientDiseaseController {
 
 	private final PatientDiseaseService patientDiseaseService;
@@ -43,14 +44,14 @@ public class PatientDiseaseController {
 
 	// Hasta ile hastalık arasında yeni bir geçmiş kaydı oluşturur.
 	@PostMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE })
+	@RequirePermission(PermissionCodes.PATIENT_DISEASES_WRITE)
 	public ApiResponse<PatientDiseaseResponse> create(@Valid @RequestBody CreatePatientDiseaseRequest request) {
 		return ApiResponse.success("Patient disease history created successfully", patientDiseaseService.create(request));
 	}
 
 	// Mevcut hasta-hastalık geçmiş kaydını günceller.
 	@PutMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE })
+	@RequirePermission(PermissionCodes.PATIENT_DISEASES_WRITE)
 	public ApiResponse<PatientDiseaseResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdatePatientDiseaseRequest request) {
@@ -59,14 +60,12 @@ public class PatientDiseaseController {
 
 	// Tekil hasta-hastalık geçmiş kaydını getirir.
 	@GetMapping("/{id}")
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PatientDiseaseResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Patient disease history retrieved successfully", patientDiseaseService.getById(id));
 	}
 
 	// Bu endpoint tüm kayıtları veya patient/disease filtresiyle alt kümeleri sayfalı şekilde döner.
 	@GetMapping
-	@RequireRole({ Role.ADMIN, Role.DOCTOR, Role.NURSE, Role.RECEPTIONIST })
 	public ApiResponse<PageResponse<PatientDiseaseResponse>> getAll(
 			@RequestParam(required = false) UUID patientId,
 			@RequestParam(required = false) UUID diseaseId,
