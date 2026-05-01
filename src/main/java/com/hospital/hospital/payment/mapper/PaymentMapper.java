@@ -36,6 +36,10 @@ public class PaymentMapper {
 	}
 
 	public PaymentResponse toResponse(Payment payment) {
+		return toResponse(payment, 0L, 0L, 0L);
+	}
+
+	public PaymentResponse toResponse(Payment payment, long invoiceCount, long transactionCount, long refundCount) {
 		if (payment == null) {
 			return null;
 		}
@@ -53,6 +57,9 @@ public class PaymentMapper {
 		response.setPaymentMethod(payment.getPaymentMethod());
 		response.setPaymentStatus(payment.getPaymentStatus());
 		response.setPaidAt(payment.getPaidAt());
+		response.setInvoiceCount(invoiceCount);
+		response.setTransactionCount(transactionCount);
+		response.setRefundCount(refundCount);
 		response.setCreatedAt(payment.getCreatedAt());
 		response.setUpdatedAt(payment.getUpdatedAt());
 		return response;

@@ -19,6 +19,9 @@ public class PaymentResponse {
 	private PaymentMethod paymentMethod;
 	private PaymentStatus paymentStatus;
 	private Instant paidAt;
+	private long invoiceCount;
+	private long transactionCount;
+	private long refundCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -95,6 +98,30 @@ public class PaymentResponse {
 
 	public void setPaidAt(Instant paidAt) {
 		this.paidAt = paidAt;
+	}
+
+	public long getInvoiceCount() {
+		return invoiceCount;
+	}
+
+	public void setInvoiceCount(long invoiceCount) {
+		this.invoiceCount = invoiceCount;
+	}
+
+	public long getTransactionCount() {
+		return transactionCount;
+	}
+
+	public void setTransactionCount(long transactionCount) {
+		this.transactionCount = transactionCount;
+	}
+
+	public long getRefundCount() {
+		return refundCount;
+	}
+
+	public void setRefundCount(long refundCount) {
+		this.refundCount = refundCount;
 	}
 
 	public Instant getCreatedAt() {
