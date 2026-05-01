@@ -15,6 +15,8 @@ public class EncounterResponse {
 	private String diagnosisNote;
 	private String treatmentNote;
 	private Instant encounterDateTime;
+	private long vitalCount;
+	private long procedureCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -99,6 +101,22 @@ public class EncounterResponse {
 
 	public void setEncounterDateTime(Instant encounterDateTime) {
 		this.encounterDateTime = encounterDateTime;
+	}
+
+	public long getVitalCount() {
+		return vitalCount;
+	}
+
+	public void setVitalCount(long vitalCount) {
+		this.vitalCount = vitalCount;
+	}
+
+	public long getProcedureCount() {
+		return procedureCount;
+	}
+
+	public void setProcedureCount(long procedureCount) {
+		this.procedureCount = procedureCount;
 	}
 
 	public Instant getCreatedAt() {

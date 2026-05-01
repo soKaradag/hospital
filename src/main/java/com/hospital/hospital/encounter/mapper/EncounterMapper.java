@@ -34,6 +34,10 @@ public class EncounterMapper {
 	}
 
 	public EncounterResponse toResponse(Encounter encounter) {
+		return toResponse(encounter, 0L, 0L);
+	}
+
+	public EncounterResponse toResponse(Encounter encounter, long vitalCount, long procedureCount) {
 		if (encounter == null) {
 			return null;
 		}
@@ -54,6 +58,8 @@ public class EncounterMapper {
 		response.setDiagnosisNote(encounter.getDiagnosisNote());
 		response.setTreatmentNote(encounter.getTreatmentNote());
 		response.setEncounterDateTime(encounter.getEncounterDateTime());
+		response.setVitalCount(vitalCount);
+		response.setProcedureCount(procedureCount);
 		response.setCreatedAt(encounter.getCreatedAt());
 		response.setUpdatedAt(encounter.getUpdatedAt());
 		return response;

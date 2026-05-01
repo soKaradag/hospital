@@ -19,7 +19,11 @@ import com.hospital.hospital.encounter.dto.EncounterResponse;
 import com.hospital.hospital.encounter.dto.UpdateEncounterRequest;
 import com.hospital.hospital.encounter.mapper.EncounterMapper;
 import com.hospital.hospital.encounter.model.Encounter;
+import com.hospital.hospital.encounter.model.EncounterProcedure;
+import com.hospital.hospital.encounter.model.EncounterVital;
+import com.hospital.hospital.encounter.repository.EncounterProcedureRepository;
 import com.hospital.hospital.encounter.repository.EncounterRepository;
+import com.hospital.hospital.encounter.repository.EncounterVitalRepository;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.patient.repository.PatientRepository;
 
@@ -31,14 +35,19 @@ public class EncounterServiceImpl implements EncounterService {
 	private final PatientRepository patientRepository;
 	private final DoctorRepository doctorRepository;
 	private final EncounterMapper encounterMapper;
+	private final EncounterVitalRepository encounterVitalRepository;
+	private final EncounterProcedureRepository encounterProcedureRepository;
 
 	public EncounterServiceImpl(EncounterRepository encounterRepository, AppointmentRepository appointmentRepository,
-			PatientRepository patientRepository, DoctorRepository doctorRepository, EncounterMapper encounterMapper) {
+			PatientRepository patientRepository, DoctorRepository doctorRepository, EncounterMapper encounterMapper,
+			EncounterVitalRepository encounterVitalRepository, EncounterProcedureRepository encounterProcedureRepository) {
 		this.encounterRepository = encounterRepository;
 		this.appointmentRepository = appointmentRepository;
 		this.patientRepository = patientRepository;
 		this.doctorRepository = doctorRepository;
 		this.encounterMapper = encounterMapper;
+		this.encounterVitalRepository = encounterVitalRepository;
+		this.encounterProcedureRepository = encounterProcedureRepository;
 	}
 
 	@Override
@@ -52,7 +61,9 @@ public class EncounterServiceImpl implements EncounterService {
 		encounter.setAppointment(appointment);
 		encounter.setPatient(patient);
 		encounter.setDoctor(doctor);
-		return encounterMapper.toResponse(encounterRepository.save(encounter));
+		Encounter savedEncounter = encounterRepository.save(encounter);
+		syncDefaultClinicalDetails(savedEncounter);
+		return toResponse(savedEncounter);
 	}
 
 	@Override
@@ -67,40 +78,42 @@ public class EncounterServiceImpl implements EncounterService {
 		encounter.setAppointment(appointment);
 		encounter.setPatient(patient);
 		encounter.setDoctor(doctor);
-		return encounterMapper.toResponse(encounterRepository.save(encounter));
+		Encounter savedEncounter = encounterRepository.save(encounter);
+		syncDefaultClinicalDetails(savedEncounter);
+		return toResponse(savedEncounter);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public EncounterResponse getById(UUID id) {
-		return encounterMapper.toResponse(getEncounter(id));
+		return toResponse(getEncounter(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<EncounterResponse> getAll(Pageable pageable) {
-		return encounterRepository.findAll(pageable).map(encounterMapper::toResponse);
+		return encounterRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<EncounterResponse> getAllByPatient(UUID patientId, Pageable pageable) {
 		getPatient(patientId);
-		return encounterRepository.findAllByPatientId(patientId, pageable).map(encounterMapper::toResponse);
+		return encounterRepository.findAllByPatientId(patientId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<EncounterResponse> getAllByDoctor(UUID doctorId, Pageable pageable) {
 		getDoctor(doctorId);
-		return encounterRepository.findAllByDoctorId(doctorId, pageable).map(encounterMapper::toResponse);
+		return encounterRepository.findAllByDoctorId(doctorId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<EncounterResponse> getAllByDateRange(Instant startInclusive, Instant endInclusive, Pageable pageable) {
 		return encounterRepository.findAllByEncounterDateTimeBetween(startInclusive, endInclusive, pageable)
-				.map(encounterMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	@Override
@@ -113,7 +126,7 @@ public class EncounterServiceImpl implements EncounterService {
 		return encounterRepository
 				.findAllByComplaintContainingIgnoreCaseOrDiagnosisNoteContainingIgnoreCaseOrTreatmentNoteContainingIgnoreCase(
 						value, value, value, pageable)
-				.map(encounterMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	private Encounter getEncounter(UUID id) {
@@ -149,5 +162,41 @@ public class EncounterServiceImpl implements EncounterService {
 		if (!appointment.getDoctor().getId().equals(doctor.getId())) {
 			throw new BusinessRuleViolationException("Encounter doctor must match appointment doctor");
 		}
+	}
+
+	private void syncDefaultClinicalDetails(Encounter encounter) {
+		syncDefaultVital(encounter);
+		syncConsultationProcedure(encounter);
+	}
+
+	private void syncDefaultVital(Encounter encounter) {
+		if (encounter.getComplaint() == null || encounter.getComplaint().isBlank()) {
+			return;
+		}
+		EncounterVital vital = new EncounterVital();
+		vital.setEncounter(encounter);
+		vital.setVitalType("TRIAGE_NOTE");
+		vital.setVitalValue(encounter.getComplaint());
+		vital.setMeasuredAt(encounter.getEncounterDateTime());
+		vital.setNote("Derived from encounter complaint");
+		encounterVitalRepository.save(vital);
+	}
+
+	private void syncConsultationProcedure(Encounter encounter) {
+		EncounterProcedure procedure = encounterProcedureRepository
+				.findByEncounterIdAndProcedureCode(encounter.getId(), "CONSULTATION")
+				.orElseGet(EncounterProcedure::new);
+		procedure.setEncounter(encounter);
+		procedure.setProcedureCode("CONSULTATION");
+		procedure.setProcedureName("Consultation");
+		procedure.setPerformedAt(encounter.getEncounterDateTime());
+		procedure.setNote(encounter.getTreatmentNote());
+		encounterProcedureRepository.save(procedure);
+	}
+
+	private EncounterResponse toResponse(Encounter encounter) {
+		long vitalCount = encounterVitalRepository.countByEncounterId(encounter.getId());
+		long procedureCount = encounterProcedureRepository.countByEncounterId(encounter.getId());
+		return encounterMapper.toResponse(encounter, vitalCount, procedureCount);
 	}
 }
