@@ -14,7 +14,9 @@ import com.hospital.hospital.department.dto.DepartmentResponse;
 import com.hospital.hospital.department.dto.UpdateDepartmentRequest;
 import com.hospital.hospital.department.mapper.DepartmentMapper;
 import com.hospital.hospital.department.model.Department;
+import com.hospital.hospital.department.repository.DepartmentServiceCatalogRepository;
 import com.hospital.hospital.department.repository.DepartmentRepository;
+import com.hospital.hospital.department.repository.RoomRepository;
 
 // Service katmanı, iş kurallarını ve veri erişimini yönetir.
 // Service anatasyonu, bu sınıfın bir Spring Bean olduğunu ve servis katmanında kullanılacağını belirtir.
@@ -38,10 +40,15 @@ public class DepartmentServiceImpl implements DepartmentService {
 	*/
 	private final DepartmentRepository departmentRepository;
 	private final DepartmentMapper departmentMapper;
+	private final RoomRepository roomRepository;
+	private final DepartmentServiceCatalogRepository departmentServiceCatalogRepository;
 
-	public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper) {
+	public DepartmentServiceImpl(DepartmentRepository departmentRepository, DepartmentMapper departmentMapper,
+			RoomRepository roomRepository, DepartmentServiceCatalogRepository departmentServiceCatalogRepository) {
 		this.departmentRepository = departmentRepository;
 		this.departmentMapper = departmentMapper;
+		this.roomRepository = roomRepository;
+		this.departmentServiceCatalogRepository = departmentServiceCatalogRepository;
 	}
 
 	@Override
@@ -52,7 +59,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 		}
 
 		Department department = departmentMapper.toEntity(request);
-		return departmentMapper.toResponse(departmentRepository.save(department));
+		return toResponse(departmentRepository.save(department));
 	}
 
 	@Override
@@ -66,19 +73,19 @@ public class DepartmentServiceImpl implements DepartmentService {
 				});
 
 		departmentMapper.updateEntity(request, department);
-		return departmentMapper.toResponse(departmentRepository.save(department));
+		return toResponse(departmentRepository.save(department));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public DepartmentResponse getById(UUID id) {
-		return departmentMapper.toResponse(getDepartment(id));
+		return toResponse(getDepartment(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<DepartmentResponse> getAll(Pageable pageable) {
-		return departmentRepository.findAll(pageable).map(departmentMapper::toResponse);
+		return departmentRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -88,11 +95,17 @@ public class DepartmentServiceImpl implements DepartmentService {
 			return getAll(pageable);
 		}
 		return departmentRepository.findAllByNameContainingIgnoreCase(keyword.trim(), pageable)
-				.map(departmentMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	private Department getDepartment(UUID id) {
 		return departmentRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Department not found: " + id));
+	}
+
+	private DepartmentResponse toResponse(Department department) {
+		long roomCount = roomRepository.countByDepartmentId(department.getId());
+		long serviceCount = departmentServiceCatalogRepository.countByDepartmentId(department.getId());
+		return departmentMapper.toResponse(department, roomCount, serviceCount);
 	}
 }

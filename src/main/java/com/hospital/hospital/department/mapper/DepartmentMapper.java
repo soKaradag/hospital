@@ -27,6 +27,10 @@ public class DepartmentMapper {
 	}
 
 	public DepartmentResponse toResponse(Department department) {
+		return toResponse(department, 0L, 0L);
+	}
+
+	public DepartmentResponse toResponse(Department department, long roomCount, long serviceCount) {
 		if (department == null) {
 			return null;
 		}
@@ -34,6 +38,8 @@ public class DepartmentMapper {
 		response.setId(department.getId());
 		response.setName(department.getName());
 		response.setDescription(department.getDescription());
+		response.setRoomCount(roomCount);
+		response.setServiceCount(serviceCount);
 		response.setCreatedAt(department.getCreatedAt());
 		response.setUpdatedAt(department.getUpdatedAt());
 		return response;

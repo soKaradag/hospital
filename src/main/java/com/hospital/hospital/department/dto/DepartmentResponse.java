@@ -8,6 +8,8 @@ public class DepartmentResponse {
 	private UUID id;
 	private String name;
 	private String description;
+	private long roomCount;
+	private long serviceCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -36,6 +38,22 @@ public class DepartmentResponse {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public long getRoomCount() {
+		return roomCount;
+	}
+
+	public void setRoomCount(long roomCount) {
+		this.roomCount = roomCount;
+	}
+
+	public long getServiceCount() {
+		return serviceCount;
+	}
+
+	public void setServiceCount(long serviceCount) {
+		this.serviceCount = serviceCount;
 	}
 
 	public Instant getCreatedAt() {
