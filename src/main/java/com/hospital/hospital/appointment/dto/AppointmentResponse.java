@@ -15,6 +15,7 @@ public class AppointmentResponse {
 	private Instant appointmentDateTime;
 	private AppointmentStatus status;
 	private String notes;
+	private long statusHistoryCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -83,6 +84,14 @@ public class AppointmentResponse {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public long getStatusHistoryCount() {
+		return statusHistoryCount;
+	}
+
+	public void setStatusHistoryCount(long statusHistoryCount) {
+		this.statusHistoryCount = statusHistoryCount;
 	}
 
 	public Instant getCreatedAt() {

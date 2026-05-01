@@ -14,8 +14,10 @@ import com.hospital.hospital.appointment.dto.CreateAppointmentRequest;
 import com.hospital.hospital.appointment.dto.UpdateAppointmentRequest;
 import com.hospital.hospital.appointment.mapper.AppointmentMapper;
 import com.hospital.hospital.appointment.model.Appointment;
+import com.hospital.hospital.appointment.model.AppointmentStatusHistory;
 import com.hospital.hospital.appointment.repository.AppointmentProcedureRepository;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
+import com.hospital.hospital.appointment.repository.AppointmentStatusHistoryRepository;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.doctor.model.Doctor;
@@ -59,6 +61,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 	private final PatientRepository patientRepository;
 	private final DoctorRepository doctorRepository;
 	private final AppointmentMapper appointmentMapper;
+	private final AppointmentStatusHistoryRepository appointmentStatusHistoryRepository;
 
 	/*
 	- Bu constructor, Spring tarafından çağrılır.
@@ -71,12 +74,14 @@ public class AppointmentServiceImpl implements AppointmentService {
 	*/
 	public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
 			AppointmentProcedureRepository appointmentProcedureRepository, PatientRepository patientRepository,
-			DoctorRepository doctorRepository, AppointmentMapper appointmentMapper) {
+			DoctorRepository doctorRepository, AppointmentMapper appointmentMapper,
+			AppointmentStatusHistoryRepository appointmentStatusHistoryRepository) {
 		this.appointmentRepository = appointmentRepository;
 		this.appointmentProcedureRepository = appointmentProcedureRepository;
 		this.patientRepository = patientRepository;
 		this.doctorRepository = doctorRepository;
 		this.appointmentMapper = appointmentMapper;
+		this.appointmentStatusHistoryRepository = appointmentStatusHistoryRepository;
 	}
 
 	/*
@@ -101,7 +106,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 		Appointment appointment = appointmentMapper.toEntity(request);
 		appointment.setPatient(getPatient(request.getPatientId()));
 		appointment.setDoctor(getDoctor(request.getDoctorId()));
-		return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+		Appointment savedAppointment = appointmentRepository.save(appointment);
+		appendStatusHistory(savedAppointment);
+		return toResponse(savedAppointment);
 	}
 
 	@Override
@@ -127,7 +134,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 					"Appointment procedure is not available. Run phase-3 advanced SQL scripts first.");
 		}
 
-		return appointmentMapper.toResponse(getAppointment(appointmentId));
+		Appointment appointment = getAppointment(appointmentId);
+		appendStatusHistory(appointment);
+		return toResponse(appointment);
 	}
 
 	@Override
@@ -138,40 +147,42 @@ public class AppointmentServiceImpl implements AppointmentService {
 		appointmentMapper.updateEntity(request, appointment);
 		appointment.setPatient(getPatient(request.getPatientId()));
 		appointment.setDoctor(getDoctor(request.getDoctorId()));
-		return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+		Appointment savedAppointment = appointmentRepository.save(appointment);
+		appendStatusHistory(savedAppointment);
+		return toResponse(savedAppointment);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public AppointmentResponse getById(UUID id) {
-		return appointmentMapper.toResponse(getAppointment(id));
+		return toResponse(getAppointment(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<AppointmentResponse> getAll(Pageable pageable) {
-		return appointmentRepository.findAll(pageable).map(appointmentMapper::toResponse);
+		return appointmentRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<AppointmentResponse> getAllByPatient(UUID patientId, Pageable pageable) {
 		getPatient(patientId);
-		return appointmentRepository.findAllByPatientId(patientId, pageable).map(appointmentMapper::toResponse);
+		return appointmentRepository.findAllByPatientId(patientId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<AppointmentResponse> getAllByDoctor(UUID doctorId, Pageable pageable) {
 		getDoctor(doctorId);
-		return appointmentRepository.findAllByDoctorId(doctorId, pageable).map(appointmentMapper::toResponse);
+		return appointmentRepository.findAllByDoctorId(doctorId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<AppointmentResponse> getAllByDateRange(Instant startInclusive, Instant endInclusive, Pageable pageable) {
 		return appointmentRepository.findAllByAppointmentDateTimeBetween(startInclusive, endInclusive, pageable)
-				.map(appointmentMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	@Override
@@ -181,7 +192,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 			return getAll(pageable);
 		}
 		return appointmentRepository.findAllByNotesContainingIgnoreCase(keyword.trim(), pageable)
-				.map(appointmentMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	private Appointment getAppointment(UUID id) {
@@ -203,5 +214,19 @@ public class AppointmentServiceImpl implements AppointmentService {
 		if (appointmentDateTime != null && appointmentDateTime.isBefore(Instant.now())) {
 			throw new BusinessRuleViolationException("Appointment dateTime cannot be in the past");
 		}
+	}
+
+	private void appendStatusHistory(Appointment appointment) {
+		AppointmentStatusHistory history = new AppointmentStatusHistory();
+		history.setAppointment(appointment);
+		history.setStatus(appointment.getStatus());
+		history.setNotes(appointment.getNotes());
+		history.setChangedAt(Instant.now());
+		appointmentStatusHistoryRepository.save(history);
+	}
+
+	private AppointmentResponse toResponse(Appointment appointment) {
+		long statusHistoryCount = appointmentStatusHistoryRepository.countByAppointmentId(appointment.getId());
+		return appointmentMapper.toResponse(appointment, statusHistoryCount);
 	}
 }
