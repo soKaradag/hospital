@@ -52,10 +52,10 @@ public class AppointmentMapper {
 
 	// Appointment entity'yi AppointmentResponse dto'ya dönüştürür.
 	public AppointmentResponse toResponse(Appointment appointment) {
-		return toResponse(appointment, 0L);
+		return toResponse(appointment, 0L, 0L);
 	}
 
-	public AppointmentResponse toResponse(Appointment appointment, long statusHistoryCount) {
+	public AppointmentResponse toResponse(Appointment appointment, long statusHistoryCount, long reminderCount) {
 		if (appointment == null) {
 			return null;
 		}
@@ -73,6 +73,7 @@ public class AppointmentMapper {
 		response.setStatus(appointment.getStatus());
 		response.setNotes(appointment.getNotes());
 		response.setStatusHistoryCount(statusHistoryCount);
+		response.setReminderCount(reminderCount);
 		response.setCreatedAt(appointment.getCreatedAt());
 		response.setUpdatedAt(appointment.getUpdatedAt());
 		return response;

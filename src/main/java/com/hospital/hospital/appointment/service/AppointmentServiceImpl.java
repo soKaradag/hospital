@@ -14,8 +14,10 @@ import com.hospital.hospital.appointment.dto.CreateAppointmentRequest;
 import com.hospital.hospital.appointment.dto.UpdateAppointmentRequest;
 import com.hospital.hospital.appointment.mapper.AppointmentMapper;
 import com.hospital.hospital.appointment.model.Appointment;
+import com.hospital.hospital.appointment.model.AppointmentReminder;
 import com.hospital.hospital.appointment.model.AppointmentStatusHistory;
 import com.hospital.hospital.appointment.repository.AppointmentProcedureRepository;
+import com.hospital.hospital.appointment.repository.AppointmentReminderRepository;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.hospital.appointment.repository.AppointmentStatusHistoryRepository;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
@@ -62,6 +64,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 	private final DoctorRepository doctorRepository;
 	private final AppointmentMapper appointmentMapper;
 	private final AppointmentStatusHistoryRepository appointmentStatusHistoryRepository;
+	private final AppointmentReminderRepository appointmentReminderRepository;
 
 	/*
 	- Bu constructor, Spring tarafından çağrılır.
@@ -75,13 +78,15 @@ public class AppointmentServiceImpl implements AppointmentService {
 	public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
 			AppointmentProcedureRepository appointmentProcedureRepository, PatientRepository patientRepository,
 			DoctorRepository doctorRepository, AppointmentMapper appointmentMapper,
-			AppointmentStatusHistoryRepository appointmentStatusHistoryRepository) {
+			AppointmentStatusHistoryRepository appointmentStatusHistoryRepository,
+			AppointmentReminderRepository appointmentReminderRepository) {
 		this.appointmentRepository = appointmentRepository;
 		this.appointmentProcedureRepository = appointmentProcedureRepository;
 		this.patientRepository = patientRepository;
 		this.doctorRepository = doctorRepository;
 		this.appointmentMapper = appointmentMapper;
 		this.appointmentStatusHistoryRepository = appointmentStatusHistoryRepository;
+		this.appointmentReminderRepository = appointmentReminderRepository;
 	}
 
 	/*
@@ -108,6 +113,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 		appointment.setDoctor(getDoctor(request.getDoctorId()));
 		Appointment savedAppointment = appointmentRepository.save(appointment);
 		appendStatusHistory(savedAppointment);
+		syncPreVisitReminder(savedAppointment);
 		return toResponse(savedAppointment);
 	}
 
@@ -136,6 +142,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
 		Appointment appointment = getAppointment(appointmentId);
 		appendStatusHistory(appointment);
+		syncPreVisitReminder(appointment);
 		return toResponse(appointment);
 	}
 
@@ -149,6 +156,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 		appointment.setDoctor(getDoctor(request.getDoctorId()));
 		Appointment savedAppointment = appointmentRepository.save(appointment);
 		appendStatusHistory(savedAppointment);
+		syncPreVisitReminder(savedAppointment);
 		return toResponse(savedAppointment);
 	}
 
@@ -227,6 +235,23 @@ public class AppointmentServiceImpl implements AppointmentService {
 
 	private AppointmentResponse toResponse(Appointment appointment) {
 		long statusHistoryCount = appointmentStatusHistoryRepository.countByAppointmentId(appointment.getId());
-		return appointmentMapper.toResponse(appointment, statusHistoryCount);
+		long reminderCount = appointmentReminderRepository.countByAppointmentId(appointment.getId());
+		return appointmentMapper.toResponse(appointment, statusHistoryCount, reminderCount);
+	}
+
+	private void syncPreVisitReminder(Appointment appointment) {
+		if (appointment.getAppointmentDateTime() == null || !appointment.getAppointmentDateTime().isAfter(Instant.now().plusSeconds(3600))) {
+			return;
+		}
+		AppointmentReminder reminder = appointmentReminderRepository
+				.findByAppointmentIdAndReminderType(appointment.getId(), "PRE_VISIT")
+				.orElseGet(AppointmentReminder::new);
+		reminder.setAppointment(appointment);
+		reminder.setReminderType("PRE_VISIT");
+		reminder.setScheduledAt(appointment.getAppointmentDateTime().minusSeconds(24 * 60 * 60));
+		reminder.setStatus("SCHEDULED");
+		reminder.setChannel("SMS");
+		reminder.setMessage("Reminder for appointment " + appointment.getId());
+		appointmentReminderRepository.save(reminder);
 	}
 }
