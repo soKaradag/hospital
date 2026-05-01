@@ -1,8 +1,7 @@
 package com.hospital.hospital.auth.dto;
 
+import java.util.List;
 import java.util.UUID;
-
-import com.hospital.hospital.auth.model.Role;
 
 // Me endpoint'inden dönen mevcut kullanıcı özetidir.
 public class CurrentUserResponse {
@@ -10,10 +9,18 @@ public class CurrentUserResponse {
 	public CurrentUserResponse() {
 	}
 
-	public CurrentUserResponse(UUID id, String username, Role role, String firstName, String lastName, String email) {
+	public CurrentUserResponse(
+			UUID id,
+			String username,
+			List<String> roles,
+			List<String> permissions,
+			String firstName,
+			String lastName,
+			String email) {
 		this.id = id;
 		this.username = username;
-		this.role = role;
+		this.roles = roles;
+		this.permissions = permissions;
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.email = email;
@@ -21,7 +28,8 @@ public class CurrentUserResponse {
 
 	private UUID id;
 	private String username;
-	private Role role;
+	private List<String> roles;
+	private List<String> permissions;
 	// İsim alanları user_info tablosundan gelir; auth tablosunu sade tutmak için ayrı tutulurlar.
 	private String firstName;
 	private String lastName;
@@ -43,12 +51,20 @@ public class CurrentUserResponse {
 		this.username = username;
 	}
 
-	public Role getRole() {
-		return role;
+	public List<String> getRoles() {
+		return roles;
 	}
 
-	public void setRole(Role role) {
-		this.role = role;
+	public void setRoles(List<String> roles) {
+		this.roles = roles;
+	}
+
+	public List<String> getPermissions() {
+		return permissions;
+	}
+
+	public void setPermissions(List<String> permissions) {
+		this.permissions = permissions;
 	}
 
 	public String getFirstName() {

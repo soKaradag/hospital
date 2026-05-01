@@ -16,10 +16,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.model.RoleEntity;
 import com.hospital.hospital.auth.model.User;
+import com.hospital.hospital.auth.model.UserRole;
 import com.hospital.hospital.auth.model.UserInfo;
+import com.hospital.hospital.auth.repository.RoleEntityRepository;
 import com.hospital.hospital.auth.repository.UserInfoRepository;
 import com.hospital.hospital.auth.repository.UserRepository;
+import com.hospital.hospital.auth.repository.UserRoleRepository;
 import com.hospital.hospital.auth.service.PasswordHashService;
 import com.hospital.hospital.common.model.Contact;
 import com.hospital.hospital.common.model.Phone;
@@ -34,6 +38,8 @@ public class AdminSeedConfig {
 			DataSource dataSource,
 			UserRepository userRepository,
 			UserInfoRepository userInfoRepository,
+			RoleEntityRepository roleEntityRepository,
+			UserRoleRepository userRoleRepository,
 			PasswordHashService passwordHashService,
 			@Value("${app.seed.admin.enabled:true}") boolean seedEnabled,
 			@Value("${app.seed.admin.username:admin}") String username,
@@ -47,6 +53,8 @@ public class AdminSeedConfig {
 				dataSource,
 				userRepository,
 				userInfoRepository,
+				roleEntityRepository,
+				userRoleRepository,
 				passwordHashService,
 				seedEnabled,
 				username,
@@ -63,6 +71,8 @@ public class AdminSeedConfig {
 			DataSource dataSource,
 			UserRepository userRepository,
 			UserInfoRepository userInfoRepository,
+			RoleEntityRepository roleEntityRepository,
+			UserRoleRepository userRoleRepository,
 			PasswordHashService passwordHashService,
 			boolean seedEnabled,
 			String username,
@@ -82,14 +92,17 @@ public class AdminSeedConfig {
 			return;
 		}
 
+		User existingUser = null;
 		try {
-			if (userRepository.existsByUsername(username)) {
-				log.info("Admin seed skipped. User '{}' already exists.", username);
-				return;
-			}
-		}
-		catch (InvalidDataAccessResourceUsageException exception) {
+			existingUser = userRepository.findByUsername(username).orElse(null);
+		} catch (InvalidDataAccessResourceUsageException exception) {
 			log.info("Admin seed skipped. Auth tables are not queryable yet.");
+			return;
+		}
+
+		if (existingUser != null) {
+			assignAdminRoleIfNeeded(dataSource, roleEntityRepository, userRoleRepository, existingUser);
+			log.info("Admin seed skipped. User '{}' already exists.", username);
 			return;
 		}
 
@@ -99,8 +112,29 @@ public class AdminSeedConfig {
 		Contact contact = new Contact(new Phone(phoneCountryCode, phoneNumber), email);
 		UserInfo userInfo = new UserInfo(savedUser, firstName, lastName, contact);
 		userInfoRepository.save(userInfo);
+		assignAdminRoleIfNeeded(dataSource, roleEntityRepository, userRoleRepository, savedUser);
 
 		log.info("Default admin user created. username='{}'", username);
+	}
+
+	private void assignAdminRoleIfNeeded(
+			DataSource dataSource,
+			RoleEntityRepository roleEntityRepository,
+			UserRoleRepository userRoleRepository,
+			User user) {
+		if (!hasTable(dataSource, "roles") || !hasTable(dataSource, "user_roles")) {
+			return;
+		}
+
+		roleEntityRepository.findByCode(Role.ADMIN.name()).ifPresent(adminRole -> saveUserRoleIfMissing(userRoleRepository, user, adminRole));
+	}
+
+	private void saveUserRoleIfMissing(UserRoleRepository userRoleRepository, User user, RoleEntity role) {
+		if (userRoleRepository.existsByUserAndRole(user, role)) {
+			return;
+		}
+
+		userRoleRepository.save(new UserRole(user, role, true));
 	}
 
 	private boolean hasTable(DataSource dataSource, String tableName) {

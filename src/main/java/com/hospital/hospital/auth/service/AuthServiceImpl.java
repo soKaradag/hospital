@@ -36,18 +36,21 @@ public class AuthServiceImpl implements AuthService {
 	private final JwtTokenService jwtTokenService;
 	private final PasswordHashService passwordHashService;
 	private final CurrentUserContext currentUserContext;
+	private final PermissionResolutionService permissionResolutionService;
 
 	public AuthServiceImpl(
 			UserRepository userRepository,
 			RefreshTokenRepository refreshTokenRepository,
 			JwtTokenService jwtTokenService,
 			PasswordHashService passwordHashService,
-			CurrentUserContext currentUserContext) {
+			CurrentUserContext currentUserContext,
+			PermissionResolutionService permissionResolutionService) {
 		this.userRepository = userRepository;
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.jwtTokenService = jwtTokenService;
 		this.passwordHashService = passwordHashService;
 		this.currentUserContext = currentUserContext;
+		this.permissionResolutionService = permissionResolutionService;
 	}
 
 	@Override
@@ -114,10 +117,13 @@ public class AuthServiceImpl implements AuthService {
 				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + principal.userId()));
 
 		UserInfo userInfo = user.getUserInfo();
+		var roleCodes = permissionResolutionService.resolveRoleCodes(user.getId());
+		var permissionCodes = permissionResolutionService.resolvePermissionCodes(user.getId()).stream().toList();
 		return new CurrentUserResponse(
 				user.getId(),
 				user.getUsername(),
-				user.getRole(),
+				roleCodes,
+				permissionCodes,
 				userInfo != null ? userInfo.getFirstName() : null,
 				userInfo != null ? userInfo.getLastName() : null,
 				userInfo != null && userInfo.getContact() != null ? userInfo.getContact().getEmail() : null);
