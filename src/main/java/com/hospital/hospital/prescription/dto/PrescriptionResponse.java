@@ -14,6 +14,8 @@ public class PrescriptionResponse {
 	private String doctorFullName;
 	private LocalDate prescriptionDate;
 	private String notes;
+	private long itemCount;
+	private long dispenseCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -79,6 +81,22 @@ public class PrescriptionResponse {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public long getItemCount() {
+		return itemCount;
+	}
+
+	public void setItemCount(long itemCount) {
+		this.itemCount = itemCount;
+	}
+
+	public long getDispenseCount() {
+		return dispenseCount;
+	}
+
+	public void setDispenseCount(long dispenseCount) {
+		this.dispenseCount = dispenseCount;
 	}
 
 	public Instant getCreatedAt() {

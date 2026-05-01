@@ -34,6 +34,10 @@ public class PrescriptionMapper {
 	// Entity alanlarını dış API için açıklayıcı response modeline dönüştürür.
 	// Patient ve doctor özet alanları birlikte dönülerek istemcinin ek sorgu ihtiyacı azaltılır.
 	public PrescriptionResponse toResponse(Prescription prescription) {
+		return toResponse(prescription, 0L, 0L);
+	}
+
+	public PrescriptionResponse toResponse(Prescription prescription, long itemCount, long dispenseCount) {
 		if (prescription == null) {
 			return null;
 		}
@@ -52,6 +56,8 @@ public class PrescriptionMapper {
 		}
 		response.setPrescriptionDate(prescription.getPrescriptionDate());
 		response.setNotes(prescription.getNotes());
+		response.setItemCount(itemCount);
+		response.setDispenseCount(dispenseCount);
 		response.setCreatedAt(prescription.getCreatedAt());
 		response.setUpdatedAt(prescription.getUpdatedAt());
 		return response;

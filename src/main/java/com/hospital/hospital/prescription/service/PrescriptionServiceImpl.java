@@ -21,7 +21,13 @@ import com.hospital.hospital.prescription.dto.CreatePrescriptionRequest;
 import com.hospital.hospital.prescription.dto.PrescriptionResponse;
 import com.hospital.hospital.prescription.dto.UpdatePrescriptionRequest;
 import com.hospital.hospital.prescription.mapper.PrescriptionMapper;
+import com.hospital.hospital.prescription.model.Medication;
+import com.hospital.hospital.prescription.model.PrescriptionDispense;
+import com.hospital.hospital.prescription.model.PrescriptionItem;
 import com.hospital.hospital.prescription.model.Prescription;
+import com.hospital.hospital.prescription.repository.MedicationRepository;
+import com.hospital.hospital.prescription.repository.PrescriptionDispenseRepository;
+import com.hospital.hospital.prescription.repository.PrescriptionItemRepository;
 import com.hospital.hospital.prescription.repository.PrescriptionRepository;
 
 /*
@@ -37,18 +43,27 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	private final PatientRepository patientRepository;
 	private final DoctorRepository doctorRepository;
 	private final PrescriptionMapper prescriptionMapper;
+	private final MedicationRepository medicationRepository;
+	private final PrescriptionItemRepository prescriptionItemRepository;
+	private final PrescriptionDispenseRepository prescriptionDispenseRepository;
 
 	public PrescriptionServiceImpl(
 			PrescriptionRepository prescriptionRepository,
 			EncounterRepository encounterRepository,
 			PatientRepository patientRepository,
 			DoctorRepository doctorRepository,
-			PrescriptionMapper prescriptionMapper) {
+			PrescriptionMapper prescriptionMapper,
+			MedicationRepository medicationRepository,
+			PrescriptionItemRepository prescriptionItemRepository,
+			PrescriptionDispenseRepository prescriptionDispenseRepository) {
 		this.prescriptionRepository = prescriptionRepository;
 		this.encounterRepository = encounterRepository;
 		this.patientRepository = patientRepository;
 		this.doctorRepository = doctorRepository;
 		this.prescriptionMapper = prescriptionMapper;
+		this.medicationRepository = medicationRepository;
+		this.prescriptionItemRepository = prescriptionItemRepository;
+		this.prescriptionDispenseRepository = prescriptionDispenseRepository;
 	}
 
 	@Override
@@ -64,7 +79,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 		prescription.setEncounter(encounter);
 		prescription.setPatient(patient);
 		prescription.setDoctor(doctor);
-		return prescriptionMapper.toResponse(prescriptionRepository.save(prescription));
+		Prescription savedPrescription = prescriptionRepository.save(prescription);
+		syncDefaultPrescriptionItem(savedPrescription);
+		return toResponse(savedPrescription);
 	}
 
 	@Override
@@ -81,21 +98,23 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 		prescription.setEncounter(encounter);
 		prescription.setPatient(patient);
 		prescription.setDoctor(doctor);
-		return prescriptionMapper.toResponse(prescriptionRepository.save(prescription));
+		Prescription savedPrescription = prescriptionRepository.save(prescription);
+		syncDefaultPrescriptionItem(savedPrescription);
+		return toResponse(savedPrescription);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tekil reçete kaydını bulup response modeline dönüştürür.
 	public PrescriptionResponse getById(UUID id) {
-		return prescriptionMapper.toResponse(getPrescription(id));
+		return toResponse(getPrescription(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tüm reçete kayıtlarını sayfalı şekilde listeler.
 	public Page<PrescriptionResponse> getAll(Pageable pageable) {
-		return prescriptionRepository.findAll(pageable).map(prescriptionMapper::toResponse);
+		return prescriptionRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -103,7 +122,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	// Encounter bazlı filtreleme belirli bir muayeneye bağlı reçeteleri getirir.
 	public Page<PrescriptionResponse> getAllByEncounter(UUID encounterId, Pageable pageable) {
 		getEncounter(encounterId);
-		return prescriptionRepository.findAllByEncounterId(encounterId, pageable).map(prescriptionMapper::toResponse);
+		return prescriptionRepository.findAllByEncounterId(encounterId, pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -111,7 +130,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	// Patient bazlı filtreleme belirli hastaya ait reçeteleri getirir.
 	public Page<PrescriptionResponse> getAllByPatient(UUID patientId, Pageable pageable) {
 		getPatient(patientId);
-		return prescriptionRepository.findAllByPatientId(patientId, pageable).map(prescriptionMapper::toResponse);
+		return prescriptionRepository.findAllByPatientId(patientId, pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -119,7 +138,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	// Doctor bazlı filtreleme belirli doktorun yazdığı reçeteleri getirir.
 	public Page<PrescriptionResponse> getAllByDoctor(UUID doctorId, Pageable pageable) {
 		getDoctor(doctorId);
-		return prescriptionRepository.findAllByDoctorId(doctorId, pageable).map(prescriptionMapper::toResponse);
+		return prescriptionRepository.findAllByDoctorId(doctorId, pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -127,7 +146,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	// Tarih aralığı filtresi reçete raporlaması ve günlük/haftalık incelemeler için temel sağlar.
 	public Page<PrescriptionResponse> getAllByDateRange(LocalDate startDate, LocalDate endDate, Pageable pageable) {
 		return prescriptionRepository.findAllByPrescriptionDateBetween(startDate, endDate, pageable)
-				.map(prescriptionMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	// Reçete kaydını tek noktadan bulur; bulunamazsa ortak not found hatası üretir.
@@ -163,5 +182,37 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 		if (!encounter.getDoctor().getId().equals(doctor.getId())) {
 			throw new BusinessRuleViolationException("Prescription doctor must match encounter doctor");
 		}
+	}
+
+	private void syncDefaultPrescriptionItem(Prescription prescription) {
+		Medication medication = medicationRepository.findByCode("GENERAL_MED")
+				.orElseThrow(() -> new ResourceNotFoundException("Medication not found: GENERAL_MED"));
+		PrescriptionItem item = prescriptionItemRepository.findFirstByPrescriptionId(prescription.getId())
+				.orElseGet(PrescriptionItem::new);
+		item.setPrescription(prescription);
+		item.setMedication(medication);
+		item.setDosage("1 tablet");
+		item.setFrequency("Twice daily");
+		item.setDurationDays(7);
+		item.setInstructions(prescription.getNotes());
+		PrescriptionItem savedItem = prescriptionItemRepository.save(item);
+		syncDispense(savedItem);
+	}
+
+	private void syncDispense(PrescriptionItem item) {
+		PrescriptionDispense dispense = prescriptionDispenseRepository.findFirstByPrescriptionItemId(item.getId())
+				.orElseGet(PrescriptionDispense::new);
+		dispense.setPrescriptionItem(item);
+		dispense.setDispensedAt(java.time.Instant.now());
+		dispense.setQuantity(14);
+		dispense.setStatus("PENDING");
+		dispense.setNote("Auto-created dispense placeholder");
+		prescriptionDispenseRepository.save(dispense);
+	}
+
+	private PrescriptionResponse toResponse(Prescription prescription) {
+		long itemCount = prescriptionItemRepository.countByPrescriptionId(prescription.getId());
+		long dispenseCount = prescriptionDispenseRepository.countByPrescriptionItemPrescriptionId(prescription.getId());
+		return prescriptionMapper.toResponse(prescription, itemCount, dispenseCount);
 	}
 }
