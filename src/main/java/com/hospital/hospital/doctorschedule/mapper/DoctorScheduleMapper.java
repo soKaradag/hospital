@@ -33,6 +33,10 @@ public class DoctorScheduleMapper {
 	}
 
 	public DoctorScheduleResponse toResponse(DoctorSchedule schedule) {
+		return toResponse(schedule, 0L, 0L);
+	}
+
+	public DoctorScheduleResponse toResponse(DoctorSchedule schedule, long leaveCount, long exceptionCount) {
 		if (schedule == null) {
 			return null;
 		}
@@ -46,6 +50,8 @@ public class DoctorScheduleMapper {
 		response.setStartTime(schedule.getStartTime());
 		response.setEndTime(schedule.getEndTime());
 		response.setActive(schedule.isActive());
+		response.setLeaveCount(leaveCount);
+		response.setExceptionCount(exceptionCount);
 		response.setCreatedAt(schedule.getCreatedAt());
 		response.setUpdatedAt(schedule.getUpdatedAt());
 		return response;

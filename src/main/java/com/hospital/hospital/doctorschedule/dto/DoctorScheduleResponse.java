@@ -14,6 +14,8 @@ public class DoctorScheduleResponse {
 	private LocalTime startTime;
 	private LocalTime endTime;
 	private boolean active;
+	private long leaveCount;
+	private long exceptionCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -71,6 +73,22 @@ public class DoctorScheduleResponse {
 
 	public void setActive(boolean active) {
 		this.active = active;
+	}
+
+	public long getLeaveCount() {
+		return leaveCount;
+	}
+
+	public void setLeaveCount(long leaveCount) {
+		this.leaveCount = leaveCount;
+	}
+
+	public long getExceptionCount() {
+		return exceptionCount;
+	}
+
+	public void setExceptionCount(long exceptionCount) {
+		this.exceptionCount = exceptionCount;
 	}
 
 	public Instant getCreatedAt() {

@@ -18,6 +18,8 @@ import com.hospital.hospital.doctorschedule.dto.DoctorScheduleResponse;
 import com.hospital.hospital.doctorschedule.dto.UpdateDoctorScheduleRequest;
 import com.hospital.hospital.doctorschedule.mapper.DoctorScheduleMapper;
 import com.hospital.hospital.doctorschedule.model.DoctorSchedule;
+import com.hospital.hospital.doctorschedule.repository.DoctorLeaveRepository;
+import com.hospital.hospital.doctorschedule.repository.DoctorScheduleExceptionRepository;
 import com.hospital.hospital.doctorschedule.repository.DoctorScheduleRepository;
 
 /*
@@ -32,14 +34,20 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 	private final DoctorScheduleRepository doctorScheduleRepository;
 	private final DoctorRepository doctorRepository;
 	private final DoctorScheduleMapper doctorScheduleMapper;
+	private final DoctorLeaveRepository doctorLeaveRepository;
+	private final DoctorScheduleExceptionRepository doctorScheduleExceptionRepository;
 
 	public DoctorScheduleServiceImpl(
 			DoctorScheduleRepository doctorScheduleRepository,
 			DoctorRepository doctorRepository,
-			DoctorScheduleMapper doctorScheduleMapper) {
+			DoctorScheduleMapper doctorScheduleMapper,
+			DoctorLeaveRepository doctorLeaveRepository,
+			DoctorScheduleExceptionRepository doctorScheduleExceptionRepository) {
 		this.doctorScheduleRepository = doctorScheduleRepository;
 		this.doctorRepository = doctorRepository;
 		this.doctorScheduleMapper = doctorScheduleMapper;
+		this.doctorLeaveRepository = doctorLeaveRepository;
+		this.doctorScheduleExceptionRepository = doctorScheduleExceptionRepository;
 	}
 
 	@Override
@@ -50,7 +58,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 		validateTimeRange(request.getStartTime(), request.getEndTime());
 		DoctorSchedule schedule = doctorScheduleMapper.toEntity(request);
 		schedule.setDoctor(getDoctor(request.getDoctorId()));
-		return doctorScheduleMapper.toResponse(doctorScheduleRepository.save(schedule));
+		return toResponse(doctorScheduleRepository.save(schedule));
 	}
 
 	@Override
@@ -62,21 +70,21 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 		DoctorSchedule schedule = getSchedule(id);
 		doctorScheduleMapper.updateEntity(request, schedule);
 		schedule.setDoctor(getDoctor(request.getDoctorId()));
-		return doctorScheduleMapper.toResponse(doctorScheduleRepository.save(schedule));
+		return toResponse(doctorScheduleRepository.save(schedule));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tekil okuma akışı doğrudan schedule kaydını bulup response'a dönüştürür.
 	public DoctorScheduleResponse getById(UUID id) {
-		return doctorScheduleMapper.toResponse(getSchedule(id));
+		return toResponse(getSchedule(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tüm schedule kayıtları sayfalı şekilde listelenir.
 	public Page<DoctorScheduleResponse> getAll(Pageable pageable) {
-		return doctorScheduleRepository.findAll(pageable).map(doctorScheduleMapper::toResponse);
+		return doctorScheduleRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -84,14 +92,14 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 	// Doktora göre filtrelemede önce doktorun varlığı doğrulanır; böylece sessizce boş liste dönmek yerine hatalı id erken yakalanır.
 	public Page<DoctorScheduleResponse> getAllByDoctor(UUID doctorId, Pageable pageable) {
 		getDoctor(doctorId);
-		return doctorScheduleRepository.findAllByDoctorId(doctorId, pageable).map(doctorScheduleMapper::toResponse);
+		return doctorScheduleRepository.findAllByDoctorId(doctorId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Haftanın gününe göre filtreleme randevu planlama tarafında temel bir sorgu zemini sağlar.
 	public Page<DoctorScheduleResponse> getAllByDay(DayOfWeek dayOfWeek, Pageable pageable) {
-		return doctorScheduleRepository.findAllByDayOfWeek(dayOfWeek, pageable).map(doctorScheduleMapper::toResponse);
+		return doctorScheduleRepository.findAllByDayOfWeek(dayOfWeek, pageable).map(this::toResponse);
 	}
 
 	// Kayıt bulunamadığında ortak not found hatası üretmek için tek noktadan schedule getirir.
@@ -115,5 +123,11 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 		if (!startTime.isBefore(endTime)) {
 			throw new BusinessRuleViolationException("Schedule startTime must be before endTime");
 		}
+	}
+
+	private DoctorScheduleResponse toResponse(DoctorSchedule schedule) {
+		long leaveCount = doctorLeaveRepository.countByDoctorId(schedule.getDoctor().getId());
+		long exceptionCount = doctorScheduleExceptionRepository.countByDoctorScheduleId(schedule.getId());
+		return doctorScheduleMapper.toResponse(schedule, leaveCount, exceptionCount);
 	}
 }
