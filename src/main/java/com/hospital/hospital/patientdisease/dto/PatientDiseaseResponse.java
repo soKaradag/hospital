@@ -13,6 +13,8 @@ public class PatientDiseaseResponse {
 	private String diseaseName;
 	private Instant diagnosedAt;
 	private String notes;
+	private long statusHistoryCount;
+	private long followupCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -78,6 +80,22 @@ public class PatientDiseaseResponse {
 
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+
+	public long getStatusHistoryCount() {
+		return statusHistoryCount;
+	}
+
+	public void setStatusHistoryCount(long statusHistoryCount) {
+		this.statusHistoryCount = statusHistoryCount;
+	}
+
+	public long getFollowupCount() {
+		return followupCount;
+	}
+
+	public void setFollowupCount(long followupCount) {
+		this.followupCount = followupCount;
 	}
 
 	public Instant getCreatedAt() {

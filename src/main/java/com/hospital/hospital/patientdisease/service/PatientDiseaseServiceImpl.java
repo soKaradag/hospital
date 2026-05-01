@@ -19,7 +19,11 @@ import com.hospital.hospital.patientdisease.dto.PatientDiseaseResponse;
 import com.hospital.hospital.patientdisease.dto.UpdatePatientDiseaseRequest;
 import com.hospital.hospital.patientdisease.mapper.PatientDiseaseMapper;
 import com.hospital.hospital.patientdisease.model.PatientDisease;
+import com.hospital.hospital.patientdisease.model.PatientDiseaseFollowup;
+import com.hospital.hospital.patientdisease.model.PatientDiseaseStatusHistory;
+import com.hospital.hospital.patientdisease.repository.PatientDiseaseFollowupRepository;
 import com.hospital.hospital.patientdisease.repository.PatientDiseaseRepository;
+import com.hospital.hospital.patientdisease.repository.PatientDiseaseStatusHistoryRepository;
 
 /*
 - Bu sınıf hasta-hastalık geçmişi iş kurallarını uygular.
@@ -33,16 +37,22 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 	private final PatientRepository patientRepository;
 	private final DiseaseRepository diseaseRepository;
 	private final PatientDiseaseMapper patientDiseaseMapper;
+	private final PatientDiseaseStatusHistoryRepository patientDiseaseStatusHistoryRepository;
+	private final PatientDiseaseFollowupRepository patientDiseaseFollowupRepository;
 
 	public PatientDiseaseServiceImpl(
 			PatientDiseaseRepository patientDiseaseRepository,
 			PatientRepository patientRepository,
 			DiseaseRepository diseaseRepository,
-			PatientDiseaseMapper patientDiseaseMapper) {
+			PatientDiseaseMapper patientDiseaseMapper,
+			PatientDiseaseStatusHistoryRepository patientDiseaseStatusHistoryRepository,
+			PatientDiseaseFollowupRepository patientDiseaseFollowupRepository) {
 		this.patientDiseaseRepository = patientDiseaseRepository;
 		this.patientRepository = patientRepository;
 		this.diseaseRepository = diseaseRepository;
 		this.patientDiseaseMapper = patientDiseaseMapper;
+		this.patientDiseaseStatusHistoryRepository = patientDiseaseStatusHistoryRepository;
+		this.patientDiseaseFollowupRepository = patientDiseaseFollowupRepository;
 	}
 
 	@Override
@@ -54,7 +64,10 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 		PatientDisease patientDisease = patientDiseaseMapper.toEntity(request);
 		patientDisease.setPatient(getPatient(request.getPatientId()));
 		patientDisease.setDisease(getDisease(request.getDiseaseId()));
-		return patientDiseaseMapper.toResponse(patientDiseaseRepository.save(patientDisease));
+		PatientDisease savedPatientDisease = patientDiseaseRepository.save(patientDisease);
+		appendStatusHistory(savedPatientDisease);
+		syncFollowup(savedPatientDisease);
+		return toResponse(savedPatientDisease);
 	}
 
 	@Override
@@ -67,21 +80,24 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 		patientDiseaseMapper.updateEntity(request, patientDisease);
 		patientDisease.setPatient(getPatient(request.getPatientId()));
 		patientDisease.setDisease(getDisease(request.getDiseaseId()));
-		return patientDiseaseMapper.toResponse(patientDiseaseRepository.save(patientDisease));
+		PatientDisease savedPatientDisease = patientDiseaseRepository.save(patientDisease);
+		appendStatusHistory(savedPatientDisease);
+		syncFollowup(savedPatientDisease);
+		return toResponse(savedPatientDisease);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tekil ilişki kaydını bulup response modeline dönüştürür.
 	public PatientDiseaseResponse getById(UUID id) {
-		return patientDiseaseMapper.toResponse(getPatientDisease(id));
+		return toResponse(getPatientDisease(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tüm hasta-hastalık geçmiş kayıtlarını sayfalı şekilde listeler.
 	public Page<PatientDiseaseResponse> getAll(Pageable pageable) {
-		return patientDiseaseRepository.findAll(pageable).map(patientDiseaseMapper::toResponse);
+		return patientDiseaseRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -89,7 +105,7 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 	// Hastaya göre filtrelemede önce patient kaydı doğrulanır; böylece hatalı id sessizce boş listeye düşmez.
 	public Page<PatientDiseaseResponse> getAllByPatient(UUID patientId, Pageable pageable) {
 		getPatient(patientId);
-		return patientDiseaseRepository.findAllByPatientId(patientId, pageable).map(patientDiseaseMapper::toResponse);
+		return patientDiseaseRepository.findAllByPatientId(patientId, pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -97,7 +113,7 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 	// Hastalığa göre filtrelemede disease kaydı doğrulanır ve ilişkili geçmiş kayıtları getirilir.
 	public Page<PatientDiseaseResponse> getAllByDisease(UUID diseaseId, Pageable pageable) {
 		getDisease(diseaseId);
-		return patientDiseaseRepository.findAllByDiseaseId(diseaseId, pageable).map(patientDiseaseMapper::toResponse);
+		return patientDiseaseRepository.findAllByDiseaseId(diseaseId, pageable).map(this::toResponse);
 	}
 
 	// İlişki kaydını tek noktadan bulur; bulunamazsa ortak not found hatası üretir.
@@ -135,5 +151,32 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 		if (!existing.getPatient().getId().equals(patientId) || !existing.getDisease().getId().equals(diseaseId)) {
 			throw new DuplicateResourceException("Patient disease history already exists for patient and disease");
 		}
+	}
+
+	private void appendStatusHistory(PatientDisease patientDisease) {
+		PatientDiseaseStatusHistory history = new PatientDiseaseStatusHistory();
+		history.setPatientDisease(patientDisease);
+		history.setStatus("ACTIVE");
+		history.setNotedAt(patientDisease.getDiagnosedAt() != null ? patientDisease.getDiagnosedAt() : java.time.Instant.now());
+		history.setNote(patientDisease.getNotes());
+		patientDiseaseStatusHistoryRepository.save(history);
+	}
+
+	private void syncFollowup(PatientDisease patientDisease) {
+		if (patientDisease.getDiagnosedAt() == null) {
+			return;
+		}
+		PatientDiseaseFollowup followup = new PatientDiseaseFollowup();
+		followup.setPatientDisease(patientDisease);
+		followup.setFollowupDateTime(patientDisease.getDiagnosedAt().plusSeconds(30L * 24 * 60 * 60));
+		followup.setStatus("SCHEDULED");
+		followup.setNote("Routine follow-up for patient disease " + patientDisease.getId());
+		patientDiseaseFollowupRepository.save(followup);
+	}
+
+	private PatientDiseaseResponse toResponse(PatientDisease patientDisease) {
+		long statusHistoryCount = patientDiseaseStatusHistoryRepository.countByPatientDiseaseId(patientDisease.getId());
+		long followupCount = patientDiseaseFollowupRepository.countByPatientDiseaseId(patientDisease.getId());
+		return patientDiseaseMapper.toResponse(patientDisease, statusHistoryCount, followupCount);
 	}
 }

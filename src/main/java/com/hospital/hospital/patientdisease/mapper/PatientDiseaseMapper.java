@@ -34,6 +34,10 @@ public class PatientDiseaseMapper {
 	// Entity alanlarını dış API için açıklayıcı response modeline dönüştürür.
 	// Hem patient hem disease tarafından özet alanlar eklenerek istemcinin ek sorgu ihtiyacı azaltılır.
 	public PatientDiseaseResponse toResponse(PatientDisease patientDisease) {
+		return toResponse(patientDisease, 0L, 0L);
+	}
+
+	public PatientDiseaseResponse toResponse(PatientDisease patientDisease, long statusHistoryCount, long followupCount) {
 		if (patientDisease == null) {
 			return null;
 		}
@@ -51,6 +55,8 @@ public class PatientDiseaseMapper {
 		}
 		response.setDiagnosedAt(patientDisease.getDiagnosedAt());
 		response.setNotes(patientDisease.getNotes());
+		response.setStatusHistoryCount(statusHistoryCount);
+		response.setFollowupCount(followupCount);
 		response.setCreatedAt(patientDisease.getCreatedAt());
 		response.setUpdatedAt(patientDisease.getUpdatedAt());
 		return response;
