@@ -14,6 +14,8 @@ import com.hospital.hospital.patient.dto.PatientResponse;
 import com.hospital.hospital.patient.dto.UpdatePatientRequest;
 import com.hospital.hospital.patient.mapper.PatientMapper;
 import com.hospital.hospital.patient.model.Patient;
+import com.hospital.hospital.patient.repository.PatientEmergencyContactRepository;
+import com.hospital.hospital.patient.repository.PatientInsuranceRepository;
 import com.hospital.hospital.patient.repository.PatientRepository;
 
 @Service
@@ -21,10 +23,16 @@ public class PatientServiceImpl implements PatientService {
 
 	private final PatientRepository patientRepository;
 	private final PatientMapper patientMapper;
+	private final PatientEmergencyContactRepository patientEmergencyContactRepository;
+	private final PatientInsuranceRepository patientInsuranceRepository;
 
-	public PatientServiceImpl(PatientRepository patientRepository, PatientMapper patientMapper) {
+	public PatientServiceImpl(PatientRepository patientRepository, PatientMapper patientMapper,
+			PatientEmergencyContactRepository patientEmergencyContactRepository,
+			PatientInsuranceRepository patientInsuranceRepository) {
 		this.patientRepository = patientRepository;
 		this.patientMapper = patientMapper;
+		this.patientEmergencyContactRepository = patientEmergencyContactRepository;
+		this.patientInsuranceRepository = patientInsuranceRepository;
 	}
 
 	@Override
@@ -32,7 +40,7 @@ public class PatientServiceImpl implements PatientService {
 	public PatientResponse create(CreatePatientRequest request) {
 		validateNationalIdForCreate(request.getNationalId());
 		Patient patient = patientMapper.toEntity(request);
-		return patientMapper.toResponse(patientRepository.save(patient));
+		return toResponse(patientRepository.save(patient));
 	}
 
 	@Override
@@ -41,19 +49,19 @@ public class PatientServiceImpl implements PatientService {
 		Patient patient = getPatient(id);
 		validateNationalIdForUpdate(id, request.getNationalId());
 		patientMapper.updateEntity(request, patient);
-		return patientMapper.toResponse(patientRepository.save(patient));
+		return toResponse(patientRepository.save(patient));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public PatientResponse getById(UUID id) {
-		return patientMapper.toResponse(getPatient(id));
+		return toResponse(getPatient(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<PatientResponse> getAll(Pageable pageable) {
-		return patientRepository.findAll(pageable).map(patientMapper::toResponse);
+		return patientRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -66,7 +74,7 @@ public class PatientServiceImpl implements PatientService {
 		return patientRepository
 				.findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrNationalIdContaining(
 						value, value, value, pageable)
-				.map(patientMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	private Patient getPatient(UUID id) {
@@ -89,5 +97,11 @@ public class PatientServiceImpl implements PatientService {
 				.ifPresent(existing -> {
 					throw new DuplicateResourceException("Patient nationalId already exists: " + nationalId);
 				});
+	}
+
+	private PatientResponse toResponse(Patient patient) {
+		long emergencyContactCount = patientEmergencyContactRepository.countByPatientId(patient.getId());
+		long insuranceCount = patientInsuranceRepository.countByPatientId(patient.getId());
+		return patientMapper.toResponse(patient, emergencyContactCount, insuranceCount);
 	}
 }

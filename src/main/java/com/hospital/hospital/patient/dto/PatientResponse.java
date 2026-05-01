@@ -18,6 +18,8 @@ public class PatientResponse {
 	private Gender gender;
 	private ContactDto contact;
 	private AddressDto address;
+	private long emergencyContactCount;
+	private long insuranceCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -86,6 +88,22 @@ public class PatientResponse {
 
 	public void setAddress(AddressDto address) {
 		this.address = address;
+	}
+
+	public long getEmergencyContactCount() {
+		return emergencyContactCount;
+	}
+
+	public void setEmergencyContactCount(long emergencyContactCount) {
+		this.emergencyContactCount = emergencyContactCount;
+	}
+
+	public long getInsuranceCount() {
+		return insuranceCount;
+	}
+
+	public void setInsuranceCount(long insuranceCount) {
+		this.insuranceCount = insuranceCount;
 	}
 
 	public Instant getCreatedAt() {

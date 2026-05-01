@@ -47,6 +47,10 @@ public class PatientMapper {
 	}
 
 	public PatientResponse toResponse(Patient patient) {
+		return toResponse(patient, 0L, 0L);
+	}
+
+	public PatientResponse toResponse(Patient patient, long emergencyContactCount, long insuranceCount) {
 		if (patient == null) {
 			return null;
 		}
@@ -59,6 +63,8 @@ public class PatientMapper {
 		response.setGender(patient.getGender());
 		response.setContact(commonValueObjectMapper.toDto(patient.getContact()));
 		response.setAddress(commonValueObjectMapper.toDto(patient.getAddress()));
+		response.setEmergencyContactCount(emergencyContactCount);
+		response.setInsuranceCount(insuranceCount);
 		response.setCreatedAt(patient.getCreatedAt());
 		response.setUpdatedAt(patient.getUpdatedAt());
 		return response;
