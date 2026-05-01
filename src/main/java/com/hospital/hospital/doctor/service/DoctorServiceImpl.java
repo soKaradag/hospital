@@ -12,10 +12,14 @@ import com.hospital.hospital.department.model.Department;
 import com.hospital.hospital.department.repository.DepartmentRepository;
 import com.hospital.hospital.doctor.dto.CreateDoctorRequest;
 import com.hospital.hospital.doctor.dto.DoctorResponse;
+import com.hospital.hospital.doctor.model.DoctorSpecialty;
+import com.hospital.hospital.doctor.model.Specialty;
 import com.hospital.hospital.doctor.dto.UpdateDoctorRequest;
 import com.hospital.hospital.doctor.mapper.DoctorMapper;
 import com.hospital.hospital.doctor.model.Doctor;
+import com.hospital.hospital.doctor.repository.DoctorSpecialtyRepository;
 import com.hospital.hospital.doctor.repository.DoctorRepository;
+import com.hospital.hospital.doctor.repository.SpecialtyRepository;
 
 @Service
 public class DoctorServiceImpl implements DoctorService {
@@ -23,12 +27,17 @@ public class DoctorServiceImpl implements DoctorService {
 	private final DoctorRepository doctorRepository;
 	private final DepartmentRepository departmentRepository;
 	private final DoctorMapper doctorMapper;
+	private final SpecialtyRepository specialtyRepository;
+	private final DoctorSpecialtyRepository doctorSpecialtyRepository;
 
 	public DoctorServiceImpl(DoctorRepository doctorRepository, DepartmentRepository departmentRepository,
-			DoctorMapper doctorMapper) {
+			DoctorMapper doctorMapper, SpecialtyRepository specialtyRepository,
+			DoctorSpecialtyRepository doctorSpecialtyRepository) {
 		this.doctorRepository = doctorRepository;
 		this.departmentRepository = departmentRepository;
 		this.doctorMapper = doctorMapper;
+		this.specialtyRepository = specialtyRepository;
+		this.doctorSpecialtyRepository = doctorSpecialtyRepository;
 	}
 
 	@Override
@@ -36,7 +45,9 @@ public class DoctorServiceImpl implements DoctorService {
 	public DoctorResponse create(CreateDoctorRequest request) {
 		Doctor doctor = doctorMapper.toEntity(request);
 		doctor.setDepartment(getDepartment(request.getDepartmentId()));
-		return doctorMapper.toResponse(doctorRepository.save(doctor));
+		Doctor savedDoctor = doctorRepository.save(doctor);
+		syncPrimarySpecialty(savedDoctor, request.getSpecialization());
+		return doctorMapper.toResponse(savedDoctor);
 	}
 
 	@Override
@@ -45,7 +56,9 @@ public class DoctorServiceImpl implements DoctorService {
 		Doctor doctor = getDoctor(id);
 		doctorMapper.updateEntity(request, doctor);
 		doctor.setDepartment(getDepartment(request.getDepartmentId()));
-		return doctorMapper.toResponse(doctorRepository.save(doctor));
+		Doctor savedDoctor = doctorRepository.save(doctor);
+		syncPrimarySpecialty(savedDoctor, request.getSpecialization());
+		return doctorMapper.toResponse(savedDoctor);
 	}
 
 	@Override
@@ -88,5 +101,41 @@ public class DoctorServiceImpl implements DoctorService {
 	private Department getDepartment(UUID id) {
 		return departmentRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Department not found: " + id));
+	}
+
+	private void syncPrimarySpecialty(Doctor doctor, String specialization) {
+		String normalizedSpecialization = normalizeSpecialization(specialization);
+		doctorSpecialtyRepository.deleteAllByDoctorId(doctor.getId());
+		if (normalizedSpecialization == null) {
+			return;
+		}
+		Specialty specialty = specialtyRepository.findByNameIgnoreCase(normalizedSpecialization)
+				.orElseGet(() -> specialtyRepository.save(createSpecialty(normalizedSpecialization)));
+		DoctorSpecialty doctorSpecialty = new DoctorSpecialty();
+		doctorSpecialty.setDoctor(doctor);
+		doctorSpecialty.setSpecialty(specialty);
+		doctorSpecialty.setPrimary(true);
+		doctorSpecialtyRepository.save(doctorSpecialty);
+	}
+
+	private Specialty createSpecialty(String name) {
+		Specialty specialty = new Specialty();
+		specialty.setName(name);
+		specialty.setCode(toCode(name));
+		specialty.setDescription(name + " specialty");
+		specialty.setActive(true);
+		return specialty;
+	}
+
+	private String normalizeSpecialization(String specialization) {
+		if (specialization == null) {
+			return null;
+		}
+		String normalized = specialization.trim();
+		return normalized.isEmpty() ? null : normalized;
+	}
+
+	private String toCode(String name) {
+		return name.trim().replaceAll("\\s+", "_").toUpperCase();
 	}
 }
