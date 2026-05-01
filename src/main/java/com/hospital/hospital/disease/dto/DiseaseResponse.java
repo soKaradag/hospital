@@ -9,6 +9,9 @@ public class DiseaseResponse {
 	private String code;
 	private String name;
 	private String description;
+	private String categoryCode;
+	private String categoryName;
+	private long codeMappingCount;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -42,6 +45,30 @@ public class DiseaseResponse {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getCategoryCode() {
+		return categoryCode;
+	}
+
+	public void setCategoryCode(String categoryCode) {
+		this.categoryCode = categoryCode;
+	}
+
+	public String getCategoryName() {
+		return categoryName;
+	}
+
+	public void setCategoryName(String categoryName) {
+		this.categoryName = categoryName;
+	}
+
+	public long getCodeMappingCount() {
+		return codeMappingCount;
+	}
+
+	public void setCodeMappingCount(long codeMappingCount) {
+		this.codeMappingCount = codeMappingCount;
 	}
 
 	public Instant getCreatedAt() {

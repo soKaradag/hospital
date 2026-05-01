@@ -35,6 +35,10 @@ public class DiseaseMapper {
 
 	// Entity alanlarını dış API için sade response modeline dönüştürür.
 	public DiseaseResponse toResponse(Disease disease) {
+		return toResponse(disease, 0L);
+	}
+
+	public DiseaseResponse toResponse(Disease disease, long codeMappingCount) {
 		if (disease == null) {
 			return null;
 		}
@@ -43,6 +47,11 @@ public class DiseaseMapper {
 		response.setCode(disease.getCode());
 		response.setName(disease.getName());
 		response.setDescription(disease.getDescription());
+		if (disease.getCategory() != null) {
+			response.setCategoryCode(disease.getCategory().getCode());
+			response.setCategoryName(disease.getCategory().getName());
+		}
+		response.setCodeMappingCount(codeMappingCount);
 		response.setCreatedAt(disease.getCreatedAt());
 		response.setUpdatedAt(disease.getUpdatedAt());
 		return response;

@@ -15,6 +15,10 @@ import com.hospital.hospital.disease.dto.DiseaseResponse;
 import com.hospital.hospital.disease.dto.UpdateDiseaseRequest;
 import com.hospital.hospital.disease.mapper.DiseaseMapper;
 import com.hospital.hospital.disease.model.Disease;
+import com.hospital.hospital.disease.model.DiseaseCategory;
+import com.hospital.hospital.disease.model.DiseaseCodeMapping;
+import com.hospital.hospital.disease.repository.DiseaseCategoryRepository;
+import com.hospital.hospital.disease.repository.DiseaseCodeMappingRepository;
 import com.hospital.hospital.disease.repository.DiseaseRepository;
 
 /*
@@ -25,12 +29,20 @@ import com.hospital.hospital.disease.repository.DiseaseRepository;
 @Service
 public class DiseaseServiceImpl implements DiseaseService {
 
+	private static final String DEFAULT_CATEGORY_CODE = "GENERAL";
+	private static final String INTERNAL_CODING_SYSTEM = "INTERNAL";
+
 	private final DiseaseRepository diseaseRepository;
 	private final DiseaseMapper diseaseMapper;
+	private final DiseaseCategoryRepository diseaseCategoryRepository;
+	private final DiseaseCodeMappingRepository diseaseCodeMappingRepository;
 
-	public DiseaseServiceImpl(DiseaseRepository diseaseRepository, DiseaseMapper diseaseMapper) {
+	public DiseaseServiceImpl(DiseaseRepository diseaseRepository, DiseaseMapper diseaseMapper,
+			DiseaseCategoryRepository diseaseCategoryRepository, DiseaseCodeMappingRepository diseaseCodeMappingRepository) {
 		this.diseaseRepository = diseaseRepository;
 		this.diseaseMapper = diseaseMapper;
+		this.diseaseCategoryRepository = diseaseCategoryRepository;
+		this.diseaseCodeMappingRepository = diseaseCodeMappingRepository;
 	}
 
 	@Override
@@ -40,7 +52,10 @@ public class DiseaseServiceImpl implements DiseaseService {
 	public DiseaseResponse create(CreateDiseaseRequest request) {
 		validateCodeForCreate(request.getCode());
 		Disease disease = diseaseMapper.toEntity(request);
-		return diseaseMapper.toResponse(diseaseRepository.save(disease));
+		disease.setCategory(getDefaultCategory());
+		Disease savedDisease = diseaseRepository.save(disease);
+		ensureInternalCodeMapping(savedDisease);
+		return toResponse(savedDisease);
 	}
 
 	@Override
@@ -51,21 +66,26 @@ public class DiseaseServiceImpl implements DiseaseService {
 		Disease disease = getDisease(id);
 		validateCodeForUpdate(id, request.getCode());
 		diseaseMapper.updateEntity(request, disease);
-		return diseaseMapper.toResponse(diseaseRepository.save(disease));
+		if (disease.getCategory() == null) {
+			disease.setCategory(getDefaultCategory());
+		}
+		Disease savedDisease = diseaseRepository.save(disease);
+		ensureInternalCodeMapping(savedDisease);
+		return toResponse(savedDisease);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Tekil okuma akışı, hastalık kaydını getirip response modeline dönüştürür.
 	public DiseaseResponse getById(UUID id) {
-		return diseaseMapper.toResponse(getDisease(id));
+		return toResponse(getDisease(id));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Katalogdaki tüm hastalıkları sayfalı şekilde listeler.
 	public Page<DiseaseResponse> getAll(Pageable pageable) {
-		return diseaseRepository.findAll(pageable).map(diseaseMapper::toResponse);
+		return diseaseRepository.findAll(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -77,7 +97,7 @@ public class DiseaseServiceImpl implements DiseaseService {
 		}
 		String value = keyword.trim();
 		return diseaseRepository.findAllByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(value, value, pageable)
-				.map(diseaseMapper::toResponse);
+				.map(this::toResponse);
 	}
 
 	// Hastalık kaydını tek noktadan bulur; bulunamazsa ortak not found hatası üretir.
@@ -100,5 +120,26 @@ public class DiseaseServiceImpl implements DiseaseService {
 				.ifPresent(existing -> {
 					throw new DuplicateResourceException("Disease code already exists: " + code);
 				});
+	}
+
+	private DiseaseCategory getDefaultCategory() {
+		return diseaseCategoryRepository.findByCode(DEFAULT_CATEGORY_CODE)
+				.orElseThrow(() -> new ResourceNotFoundException("Disease category not found: " + DEFAULT_CATEGORY_CODE));
+	}
+
+	private void ensureInternalCodeMapping(Disease disease) {
+		DiseaseCodeMapping mapping = diseaseCodeMappingRepository
+				.findByDiseaseIdAndCodingSystem(disease.getId(), INTERNAL_CODING_SYSTEM)
+				.orElseGet(DiseaseCodeMapping::new);
+		mapping.setDisease(disease);
+		mapping.setCodingSystem(INTERNAL_CODING_SYSTEM);
+		mapping.setExternalCode(disease.getCode());
+		mapping.setDescription(disease.getName() + " internal mapping");
+		diseaseCodeMappingRepository.save(mapping);
+	}
+
+	private DiseaseResponse toResponse(Disease disease) {
+		long codeMappingCount = diseaseCodeMappingRepository.countByDiseaseId(disease.getId());
+		return diseaseMapper.toResponse(disease, codeMappingCount);
 	}
 }
