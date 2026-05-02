@@ -6,10 +6,11 @@ Odak, mevcut `hospital-core` servisini bozmadan yeni bir `inventory-service` ekl
 
 ## Guncel Durum
 
-- `hospital-core` Faz 3 sonunda `48` tabloya ulasmistir.
+- `hospital-core` su anda `56` tabloya ulasmistir.
+- `inventory-service` su anda `22` tabloya ulasmistir.
 - Permission-first RBAC aktif durumdadir.
-- Faz 4 icin tasarim dokumani hazirdir.
-- Inventory ve cerrahi alan henuz kod tarafinda ayrismamistir.
+- Faz 4 tasarimi kod tarafina tasinmistir.
+- Inventory, klinik tuketim ve cerrahi rezervasyon akislarinin local smoke otomasyonu hazirdir.
 
 ## Faz 4 Hedefi
 
@@ -35,6 +36,39 @@ Odak, mevcut `hospital-core` servisini bozmadan yeni bir `inventory-service` ekl
 - Klinik stok entegrasyonlari sadece gerekli use case'lerde tetiklenir.
 - `hospital-core`, stok gerceginin sahibi olmadan inventory sonucunu kullanabilir.
 - Ameliyat use case'leri icin rezervasyon, tuketim ve iptal akislarinin kontrati netlesmis olur.
+
+## Local Runtime ve Smoke Kontrati
+
+Varsayilan local sozlesme:
+- Core DB: `hospital`
+- Inventory DB: `hospital_inventory`
+- `hospital-core`: `http://127.0.0.1:8080`
+- `inventory-service`: `http://127.0.0.1:8081`
+- Varsayilan admin kullanicisi: `admin / admin123`
+
+Temel komutlar:
+1. `bash scripts/phase4-db-reset.sh`
+2. `bash scripts/phase4-up.sh`
+3. `bash scripts/phase4-smoke.sh`
+
+`phase4-smoke.sh` su adimlari tek shell icinde sirayla yapar:
+1. core ve inventory DB'lerini resetler
+2. versioned SQL migrationlarini uygular
+3. `inventory-service`i baslatir
+4. `hospital-core`u baslatir
+5. `inventory-standalone-smoke.py` akisini kosar
+6. `phase4-clinical-smoke.py` akisini kosar
+
+Beklenen sonuc:
+- script sonunda `Phase 4 dual-service smoke passed.` gorulur
+- inventory standalone smoke category -> warehouse -> supplier -> item -> purchase order -> goods receipt -> availability akisini gecer
+- clinical smoke encounter tuketimi, prescription tuketimi ve surgery reserve/cancel/complete akisini gecer
+
+2026-05-02 dogrulama durumu:
+- `./mvnw -q -DskipTests compile` gecti
+- `./mvnw -q -f inventory-service/pom.xml -DskipTests compile` gecti
+- odakli core ve inventory testleri gecti
+- `bash scripts/phase4-smoke.sh` gecti
 
 ## Oncelikli Use Case Seti
 

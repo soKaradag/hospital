@@ -9,9 +9,9 @@ Amac, klinik ve operasyonel cekirdegi parcalamadan stok yonetimi, depo hareketle
 - Mevcut servis: `hospital-core`
 - Yeni servis: `inventory-service`
 - Yaklasim: iki servisli yapi
-- Mevcut `hospital-core` tablo sayisi: `48`
+- Mevcut `hospital-core` tablo sayisi: `56`
 - `inventory-service` hedef tablo sayisi: `22`
-- Ekosistem toplam tablo sayisi: `70`
+- Ekosistem toplam tablo sayisi: `78`
 
 ## Temel Karar
 
@@ -20,6 +20,16 @@ Amac, klinik ve operasyonel cekirdegi parcalamadan stok yonetimi, depo hareketle
 - Yeni servis yalnizca envanter ve tedarik akislarindan sorumlu olur.
 - `inventory-service` once net API sinirlariyla kurulur; gereksiz daginik event mimarisine erken gecilmez.
 - Servisler arasi bag dogrudan tablo paylasimi ile degil, HTTP API ve sonradan eklenebilecek domain event'leri ile kurulur.
+
+## Runtime Kontrati
+
+Local operasyon sozlesmesi:
+- Core DB: `hospital`
+- Inventory DB: `hospital_inventory`
+- `hospital-core`: `http://127.0.0.1:8080`
+- `inventory-service`: `http://127.0.0.1:8081`
+- `inventory-service`, token introspection icin `hospital-core` uzerindeki `GET /api/internal/auth/introspect` endpoint'ini kullanir
+- Varsayilan smoke kullanicisi: `admin / admin123`
 
 ## Neden Ayri Inventory Service
 

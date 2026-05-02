@@ -2,13 +2,15 @@
 
 Bu proje, hastane yonetim sistemi icin gelistirilen Spring Boot tabanli backend uygulamasidir.
 
-Su an proje **Phase 3 foundation** seviyesindedir. Faz 1 ve Faz 2 cekirdek akislarinin uzerine permission-first RBAC, Flyway tabanli schema yonetimi ve domain derinlestirme calismalari eklenmistir.
+Su an proje **Phase 4 foundation** seviyesindedir. Faz 3'te kurulan permission-first RBAC ve domain derinlestirme omurgasinin yanina, ayni repo icinde calisan `inventory-service` ve cerrahi hazirlik akislarinin operasyonel kapanisi eklenmistir.
 
 ## Mevcut Durum
 - Schema kaynagi Flyway migration dosyalaridir.
 - Yetkilendirme modeli permission-first RBAC yapisina tasinmistir.
 - `/api/auth/me` `roles` ve `permissions` doner.
-- Backend tablo sayisi su anda `48` seviyesindedir.
+- `hospital-core` tablo sayisi su anda `56` seviyesindedir.
+- `inventory-service` tablo sayisi su anda `22` seviyesindedir.
+- Ekosistem toplam tablo sayisi su anda `78` seviyesindedir.
 
 ## Kapsam
 - Custom authentication altyapisi (`Spring Security` framework olarak kullanilmaz)
@@ -56,7 +58,7 @@ Su an proje **Phase 3 foundation** seviyesindedir. Faz 1 ve Faz 2 cekirdek akisl
 - Schema migrationlari `src/main/resources/db/migration` altinda tutulur.
 
 ## Tablo Durumu
-Toplam tablo sayisi su anda `48`:
+`hospital-core` tablo sayisi su anda `56`:
 
 - Cekirdek: `departments`, `doctors`, `patients`, `appointments`, `encounters`, `payments`
 - Auth/RBAC: `users`, `user_info`, `refresh_tokens`, `roles`, `permissions`, `role_permissions`, `user_roles`, `login_attempts`, `password_reset_tokens`
@@ -67,6 +69,32 @@ Toplam tablo sayisi su anda `48`:
 - Appointment ve encounter genislemeleri: `appointment_status_history`, `appointment_reminders`, `encounter_vitals`, `encounter_procedures`, `encounter_diagnoses`, `encounter_diagnosis_history`
 - Prescription genislemeleri: `prescriptions`, `medications`, `prescription_items`, `prescription_dispenses`
 - Finance ve reporting: `invoices`, `payment_transactions`, `payment_refunds`, `payment_audit`, `report_snapshots`, `report_export_jobs`
+- Surgery genislemeleri: `operating_rooms`, `surgery_requests`, `surgeries`, `surgery_team_assignments`, `surgery_status_history`, `doctor_procedure_privileges`, `surgery_supply_templates`, `surgery_supply_template_items`
+
+`inventory-service` tablo sayisi su anda `22`:
+
+- Master data: `warehouses`, `warehouse_zones`, `inventory_categories`, `inventory_items`, `inventory_item_units`, `inventory_item_aliases`, `inventory_item_barcodes`, `suppliers`
+- Stock operations: `stock_batches`, `stock_movements`, `stock_reservations`, `stock_adjustments`, `stock_transfer_requests`, `stock_transfers`, `stock_counts`, `stock_count_lines`
+- Procurement ve planning: `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items`, `supplier_catalog_items`, `reorder_rules`
+
+## Faz 4 Local Calistirma
+
+Varsayilan local sozlesme:
+- `hospital-core`: `http://127.0.0.1:8080`
+- `inventory-service`: `http://127.0.0.1:8081`
+- Core DB: `hospital`
+- Inventory DB: `hospital_inventory`
+- Varsayilan admin kullanicisi: `admin / admin123`
+
+Temel komutlar:
+- DB reset: `bash scripts/phase4-db-reset.sh`
+- Iki servisi birlikte baslat: `bash scripts/phase4-up.sh`
+- Uctan uca Faz 4 smoke: `bash scripts/phase4-smoke.sh`
+
+Beklenen smoke sonucu:
+- inventory standalone akisi gecer: category -> warehouse -> supplier -> item -> purchase order -> goods receipt -> availability
+- clinical akisi gecer: encounter consultation consume -> prescription consume -> surgery reserve/cancel/complete
+- script cikisinda `Phase 4 dual-service smoke passed.` gorulur
 
 ## API Kararlari
 - Basarili cevaplar `ApiResponse<T>` ile doner.
@@ -91,5 +119,5 @@ Detayli aciklamalar `docs` klasoru altindadir:
 - [Faz 4 - Inventory Service Yurutme Plani](docs/phase-4-execution-plan.md)
 
 ## Sonraki Yon
-- Kalan ana is cleanup ve contract sabitlemedir.
-- Gecis notlari, dokuman uyarlamasi ve varsa bridge temizligi ayri bir kapanis adiminda toparlanacaktir.
+- Faz 4 foundation artik iki servisli local runtime ve smoke ile dogrulanmis durumdadir.
+- Sonraki ana adaylar production deployment profili, CI smoke otomasyonu ve gerekli gorulurse inventory event/outbox olgunlastirmasidir.
