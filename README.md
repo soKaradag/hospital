@@ -88,6 +88,7 @@ Detayli aciklamalar `docs` klasoru altindadir:
 - [Faz 3 - 48 Tabloya Gecis Plani](docs/phase-3-48-table-transition.md)
 - [Faz 3 - Uygulama Yurutme Plani](docs/phase-3-execution-plan.md)
 - [Faz 4 - Inventory Service Tasarimi](docs/phase-4-inventory-service-design.md)
+- [Faz 4 - Inventory Service Yurutme Plani](docs/phase-4-execution-plan.md)
 
 ## Sonraki Yon
 - Kalan ana is cleanup ve contract sabitlemedir.
