@@ -47,7 +47,7 @@ select '00000000-0000-0000-0000-000000000104',
        now(6)
 where not exists (select 1 from suppliers where code = 'CLN-SUP');
 
-insert into inventory_items (id, inventory_category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
+insert into inventory_items (id, category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000105',
        '00000000-0000-0000-0000-000000000103',
        'DISINFECTANT_WIPES',
@@ -60,7 +60,7 @@ select '00000000-0000-0000-0000-000000000105',
        now(6)
 where not exists (select 1 from inventory_items where code = 'DISINFECTANT_WIPES');
 
-insert into inventory_items (id, inventory_category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
+insert into inventory_items (id, category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000106',
        '00000000-0000-0000-0000-000000000103',
        'TRASH_BAG_55L',
@@ -73,7 +73,7 @@ select '00000000-0000-0000-0000-000000000106',
        now(6)
 where not exists (select 1 from inventory_items where code = 'TRASH_BAG_55L');
 
-insert into inventory_item_units (id, inventory_item_id, code, name, conversion_factor, base_unit, created_at, updated_at)
+insert into inventory_item_units (id, inventory_item_id, unit_code, unit_name, conversion_factor, base_unit, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000107',
        '00000000-0000-0000-0000-000000000105',
        'PACK',
@@ -83,10 +83,10 @@ select '00000000-0000-0000-0000-000000000107',
        now(6),
        now(6)
 where not exists (
-    select 1 from inventory_item_units where inventory_item_id = '00000000-0000-0000-0000-000000000105' and code = 'PACK'
+    select 1 from inventory_item_units where inventory_item_id = '00000000-0000-0000-0000-000000000105' and unit_code = 'PACK'
 );
 
-insert into inventory_item_units (id, inventory_item_id, code, name, conversion_factor, base_unit, created_at, updated_at)
+insert into inventory_item_units (id, inventory_item_id, unit_code, unit_name, conversion_factor, base_unit, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000108',
        '00000000-0000-0000-0000-000000000106',
        'ROLL',
@@ -96,7 +96,7 @@ select '00000000-0000-0000-0000-000000000108',
        now(6),
        now(6)
 where not exists (
-    select 1 from inventory_item_units where inventory_item_id = '00000000-0000-0000-0000-000000000106' and code = 'ROLL'
+    select 1 from inventory_item_units where inventory_item_id = '00000000-0000-0000-0000-000000000106' and unit_code = 'ROLL'
 );
 
 insert into supplier_catalog_items (id, supplier_id, inventory_item_id, supplier_item_code, unit_code, unit_price, active, created_at, updated_at)

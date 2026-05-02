@@ -89,8 +89,12 @@ class AuthServiceImplTest {
 	void refreshShouldRevokeExistingTokenAndCreateNewPair() {
 		User user = new User("doctor1", "stored-hash", Role.DOCTOR);
 		user.setId(UUID.randomUUID());
+		Instant issuedAt = Instant.now().minusSeconds(60);
+		Instant expiresAt = Instant.now().plusSeconds(3600);
+		Instant rotatedIssuedAt = Instant.now();
+		Instant rotatedExpiresAt = Instant.now().plusSeconds(7200);
 
-		RefreshToken existingToken = new RefreshToken(user, "old-hash", Instant.parse("2026-04-27T10:00:00Z"));
+		RefreshToken existingToken = new RefreshToken(user, "old-hash", expiresAt);
 		existingToken.setId(UUID.randomUUID());
 
 		RefreshTokenRequest request = new RefreshTokenRequest();
@@ -103,16 +107,16 @@ class AuthServiceImplTest {
 				user.getUsername(),
 				user.getRole(),
 				com.hospital.hospital.auth.token.TokenType.REFRESH,
-				Instant.parse("2026-03-27T10:00:00Z"),
-				Instant.parse("2026-04-27T10:00:00Z")));
+				issuedAt,
+				expiresAt));
 		when(jwtTokenService.generateTokenPair(user)).thenReturn(new AuthTokenPair("new-access", "new-refresh"));
 		when(jwtTokenService.parseRefreshToken("new-refresh")).thenReturn(new TokenPrincipal(
 				user.getId(),
 				user.getUsername(),
 				user.getRole(),
 				com.hospital.hospital.auth.token.TokenType.REFRESH,
-				Instant.parse("2026-03-27T10:05:00Z"),
-				Instant.parse("2026-04-28T10:05:00Z")));
+				rotatedIssuedAt,
+				rotatedExpiresAt));
 		when(jwtTokenService.hashToken("new-refresh")).thenReturn("new-hash");
 
 		AuthTokenResponse response = authService.refresh(request);

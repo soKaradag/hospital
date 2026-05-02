@@ -14,14 +14,14 @@ import com.hospital.inventory.inventoryitem.model.InventoryItem;
 
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, UUID> {
 
-	@EntityGraph(attributePaths = { "category", "units", "aliases", "barcodes" })
+	@EntityGraph(attributePaths = { "category", "units" })
 	Optional<InventoryItem> findById(UUID id);
 
 	boolean existsByCodeIgnoreCase(String code);
 
 	Optional<InventoryItem> findByCodeIgnoreCase(String code);
 
-	@EntityGraph(attributePaths = { "category", "units", "aliases", "barcodes" })
+	@EntityGraph(attributePaths = { "category", "units" })
 	@Query("""
 			select distinct item
 			from InventoryItem item
@@ -34,6 +34,6 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
 			""")
 	Page<InventoryItem> search(@Param("keyword") String keyword, Pageable pageable);
 
-	@EntityGraph(attributePaths = { "category", "units", "aliases", "barcodes" })
+	@EntityGraph(attributePaths = { "category", "units" })
 	Page<InventoryItem> findAll(Pageable pageable);
 }

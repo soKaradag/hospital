@@ -1,4 +1,4 @@
-insert into inventory_items (id, inventory_category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
+insert into inventory_items (id, category_id, code, name, description, track_batches, track_expiry, active, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000301',
        '00000000-0000-0000-0000-000000000203',
        'CONSULTATION',
@@ -11,7 +11,7 @@ select '00000000-0000-0000-0000-000000000301',
        now(6)
 where not exists (select 1 from inventory_items where code = 'CONSULTATION');
 
-insert into inventory_item_units (id, inventory_item_id, code, name, conversion_factor, base_unit, created_at, updated_at)
+insert into inventory_item_units (id, inventory_item_id, unit_code, unit_name, conversion_factor, base_unit, created_at, updated_at)
 select '00000000-0000-0000-0000-000000000302',
        '00000000-0000-0000-0000-000000000301',
        'KIT',
@@ -23,7 +23,7 @@ select '00000000-0000-0000-0000-000000000302',
 where not exists (
     select 1 from inventory_item_units
     where inventory_item_id = '00000000-0000-0000-0000-000000000301'
-      and code = 'KIT'
+      and unit_code = 'KIT'
 );
 
 insert into stock_batches (id, inventory_item_id, warehouse_id, warehouse_zone_id, batch_number, expires_at, quantity_on_hand, active, created_at, updated_at)

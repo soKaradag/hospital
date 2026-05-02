@@ -29,6 +29,48 @@ ensure_database() {
 		"CREATE DATABASE IF NOT EXISTS \`${db_name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 }
 
+database_table_count() {
+	local db_name="$1"
+	local mysql_host="${MYSQL_HOST:-127.0.0.1}"
+	local mysql_port="${MYSQL_PORT:-3306}"
+	local mysql_user="${MYSQL_USER:-root}"
+	local mysql_password="${MYSQL_PASSWORD:-}"
+
+	local mysql_args=(-N -s -h"${mysql_host}" -P"${mysql_port}" -u"${mysql_user}")
+	if [[ -n "${mysql_password}" ]]; then
+		mysql_args+=(-p"${mysql_password}")
+	fi
+
+	mysql "${mysql_args[@]}" -e \
+		"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${db_name}';"
+}
+
+apply_migrations_if_empty() {
+	local db_name="$1"
+	local migration_dir="$2"
+	local table_count
+	local mysql_host="${MYSQL_HOST:-127.0.0.1}"
+	local mysql_port="${MYSQL_PORT:-3306}"
+	local mysql_user="${MYSQL_USER:-root}"
+	local mysql_password="${MYSQL_PASSWORD:-}"
+
+	table_count="$(database_table_count "${db_name}")"
+	if [[ "${table_count}" != "0" ]]; then
+		echo "Skipping migration apply for ${db_name}; existing table count=${table_count}"
+		return 0
+	fi
+
+	local mysql_args=(-h"${mysql_host}" -P"${mysql_port}" -u"${mysql_user}")
+	if [[ -n "${mysql_password}" ]]; then
+		mysql_args+=(-p"${mysql_password}")
+	fi
+
+	while IFS= read -r migration_file; do
+		echo "Applying ${migration_file} to ${db_name}"
+		mysql "${mysql_args[@]}" "${db_name}" < "${migration_file}"
+	done < <(find "${migration_dir}" -maxdepth 1 -type f -name 'V*.sql' | sort -V)
+}
+
 wait_for_http() {
 	local url="$1"
 	local service_name="$2"
@@ -67,16 +109,20 @@ start_service() {
 
 ensure_database "${CORE_DB_NAME:-hospital}"
 ensure_database "${INVENTORY_DB_NAME:-hospital_inventory}"
+apply_migrations_if_empty "${CORE_DB_NAME:-hospital}" "${ROOT_DIR}/src/main/resources/db/migration"
+apply_migrations_if_empty "${INVENTORY_DB_NAME:-hospital_inventory}" "${ROOT_DIR}/inventory-service/src/main/resources/db/migration"
 
 start_service \
 	"${INVENTORY_PID_FILE}" \
 	"${INVENTORY_LOG}" \
+	env SPRING_DEVTOOLS_RESTART_ENABLED=false \
 	./mvnw -q -f inventory-service/pom.xml -DskipTests spring-boot:run
 wait_for_http "http://127.0.0.1:${INVENTORY_PORT}/api/inventory/system/health" "inventory-service"
 
 start_service \
 	"${CORE_PID_FILE}" \
 	"${CORE_LOG}" \
+	env SPRING_DEVTOOLS_RESTART_ENABLED=false \
 	./mvnw -q -DskipTests spring-boot:run
 wait_for_http "http://127.0.0.1:${CORE_PORT}/api/auth/login" "hospital-core"
 

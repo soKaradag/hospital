@@ -37,5 +37,7 @@ create table if not exists surgery_supply_template_items (
 ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 alter table surgeries
-    add column if not exists supply_template_id varchar(36),
+    add column supply_template_id varchar(36);
+
+alter table surgeries
     add constraint fk_surgeries_supply_template foreign key (supply_template_id) references surgery_supply_templates(id);

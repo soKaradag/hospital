@@ -117,6 +117,7 @@ public class JwtTokenServiceImpl implements JwtTokenService {
 		payload.put("username", user.getUsername());
 		payload.put("role", user.getRole().name());
 		payload.put("token_type", tokenType.name());
+		payload.put("jti", UUID.randomUUID().toString());
 		payload.put("iat", now.getEpochSecond());
 		payload.put("exp", expiresAt.getEpochSecond());
 
