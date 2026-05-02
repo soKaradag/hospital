@@ -9,7 +9,7 @@ create table encounter_diagnosis_history (
     primary key (id),
     constraint fk_encounter_diagnosis_history_diagnosis foreign key (encounter_diagnosis_id) references encounter_diagnoses (id),
     constraint fk_encounter_diagnosis_history_disease foreign key (disease_id) references diseases (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into encounter_diagnosis_history (id, encounter_diagnosis_id, disease_id, notes, revised_at, created_at, updated_at)
 select

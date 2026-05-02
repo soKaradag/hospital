@@ -9,7 +9,7 @@ create table encounter_vitals (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_encounter_vitals_encounter foreign key (encounter_id) references encounters (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table encounter_procedures (
     id varchar(36) not null,
@@ -22,7 +22,7 @@ create table encounter_procedures (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_encounter_procedures_encounter foreign key (encounter_id) references encounters (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into encounter_procedures (id, encounter_id, procedure_code, procedure_name, performed_at, note, created_at, updated_at)
 select

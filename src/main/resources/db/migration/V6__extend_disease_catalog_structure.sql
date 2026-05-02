@@ -9,7 +9,7 @@ create table disease_categories (
     primary key (id),
     constraint uk_disease_categories_code unique (code),
     constraint uk_disease_categories_name unique (name)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into disease_categories (id, code, name, description, active, created_at, updated_at)
 values
@@ -42,7 +42,7 @@ create table disease_code_mappings (
     constraint fk_disease_code_mappings_disease foreign key (disease_id) references diseases (id),
     constraint uk_disease_code_mappings_system_code unique (coding_system, external_code),
     constraint uk_disease_code_mappings_disease_system unique (disease_id, coding_system)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into disease_code_mappings (id, disease_id, coding_system, external_code, description, created_at, updated_at)
 select

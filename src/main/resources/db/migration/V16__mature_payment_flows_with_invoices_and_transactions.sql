@@ -11,7 +11,7 @@ create table invoices (
     primary key (id),
     constraint fk_invoices_payment foreign key (payment_id) references payments (id),
     constraint uk_invoices_invoice_number unique (invoice_number)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table payment_transactions (
     id varchar(36) not null,
@@ -26,7 +26,7 @@ create table payment_transactions (
     primary key (id),
     constraint fk_payment_transactions_payment foreign key (payment_id) references payments (id),
     constraint uk_payment_transactions_reference unique (transaction_reference)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table payment_refunds (
     id varchar(36) not null,
@@ -39,7 +39,7 @@ create table payment_refunds (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_payment_refunds_payment foreign key (payment_id) references payments (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into invoices (id, payment_id, invoice_number, issued_at, total_amount, currency, status, created_at, updated_at)
 select

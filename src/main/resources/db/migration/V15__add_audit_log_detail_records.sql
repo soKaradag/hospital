@@ -7,7 +7,7 @@ create table audit_log_details (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_audit_log_details_audit_log foreign key (audit_log_id) references audit_logs (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into audit_log_details (id, audit_log_id, detail_key, detail_value, created_at, updated_at)
 select uuid(), al.id, 'message', al.message, current_timestamp(6), current_timestamp(6)

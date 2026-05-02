@@ -7,7 +7,7 @@ create table report_snapshots (
     created_at datetime(6) not null,
     updated_at datetime(6) not null,
     primary key (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table report_export_jobs (
     id varchar(36) not null,
@@ -21,7 +21,7 @@ create table report_export_jobs (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_report_export_jobs_snapshot foreign key (report_snapshot_id) references report_snapshots (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create index idx_report_snapshots_report_code on report_snapshots (report_code);
 create index idx_report_export_jobs_snapshot_id on report_export_jobs (report_snapshot_id);

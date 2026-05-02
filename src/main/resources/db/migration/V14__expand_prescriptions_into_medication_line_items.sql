@@ -10,7 +10,7 @@ create table medications (
     primary key (id),
     constraint uk_medications_code unique (code),
     constraint uk_medications_name unique (name)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table prescription_items (
     id varchar(36) not null,
@@ -25,7 +25,7 @@ create table prescription_items (
     primary key (id),
     constraint fk_prescription_items_prescription foreign key (prescription_id) references prescriptions (id),
     constraint fk_prescription_items_medication foreign key (medication_id) references medications (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table prescription_dispenses (
     id varchar(36) not null,
@@ -38,7 +38,7 @@ create table prescription_dispenses (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_prescription_dispenses_item foreign key (prescription_item_id) references prescription_items (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into medications (id, code, name, form, strength, active, created_at, updated_at)
 values

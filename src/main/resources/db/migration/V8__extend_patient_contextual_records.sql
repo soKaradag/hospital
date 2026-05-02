@@ -9,7 +9,7 @@ create table patient_emergency_contacts (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_patient_emergency_contacts_patient foreign key (patient_id) references patients (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table patient_insurances (
     id varchar(36) not null,
@@ -25,7 +25,7 @@ create table patient_insurances (
     primary key (id),
     constraint fk_patient_insurances_patient foreign key (patient_id) references patients (id),
     constraint uk_patient_insurances_policy_number unique (policy_number)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create index idx_patient_emergency_contacts_patient_id on patient_emergency_contacts (patient_id);
 create index idx_patient_insurances_patient_id on patient_insurances (patient_id);

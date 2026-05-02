@@ -11,7 +11,7 @@ create table appointment_reminders (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_appointment_reminders_appointment foreign key (appointment_id) references appointments (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into appointment_reminders (id, appointment_id, reminder_type, scheduled_at, sent_at, status, channel, message, created_at, updated_at)
 select

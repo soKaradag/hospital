@@ -10,7 +10,7 @@ create table rooms (
     primary key (id),
     constraint fk_rooms_department foreign key (department_id) references departments (id),
     constraint uk_rooms_department_room_number unique (department_id, room_number)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table department_service_catalog (
     id varchar(36) not null,
@@ -24,7 +24,7 @@ create table department_service_catalog (
     primary key (id),
     constraint fk_department_service_catalog_department foreign key (department_id) references departments (id),
     constraint uk_department_service_catalog_department_service_code unique (department_id, service_code)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create index idx_rooms_department_id on rooms (department_id);
 create index idx_department_service_catalog_department_id on department_service_catalog (department_id);

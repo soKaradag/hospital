@@ -8,7 +8,7 @@ create table appointment_status_history (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_appointment_status_history_appointment foreign key (appointment_id) references appointments (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into appointment_status_history (id, appointment_id, status, notes, changed_at, created_at, updated_at)
 select

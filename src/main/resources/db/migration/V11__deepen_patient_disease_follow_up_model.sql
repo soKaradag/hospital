@@ -8,7 +8,7 @@ create table patient_disease_status_history (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_patient_disease_status_history_patient_disease foreign key (patient_disease_id) references patient_diseases (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 create table patient_disease_followups (
     id varchar(36) not null,
@@ -20,7 +20,7 @@ create table patient_disease_followups (
     updated_at datetime(6) not null,
     primary key (id),
     constraint fk_patient_disease_followups_patient_disease foreign key (patient_disease_id) references patient_diseases (id)
-);
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci;
 
 insert into patient_disease_status_history (id, patient_disease_id, status, noted_at, note, created_at, updated_at)
 select
