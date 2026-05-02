@@ -1,0 +1,56 @@
+package com.hospital.inventory.stock.repository;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.hospital.inventory.stock.model.ReservationStatus;
+import com.hospital.inventory.stock.model.StockReservation;
+
+public interface StockReservationRepository extends JpaRepository<StockReservation, UUID> {
+
+	@Query("""
+			select coalesce(sum(reservation.quantity), 0)
+			from StockReservation reservation
+			where reservation.inventoryItem.id = :itemId
+			  and reservation.status = :status
+			""")
+	BigDecimal sumQuantityByItemIdAndStatus(@Param("itemId") UUID itemId, @Param("status") ReservationStatus status);
+
+	@Query("""
+			select coalesce(sum(reservation.quantity), 0)
+			from StockReservation reservation
+			where reservation.stockBatch.id = :batchId
+			  and reservation.status = :status
+			""")
+	BigDecimal sumQuantityByBatchIdAndStatus(@Param("batchId") UUID batchId, @Param("status") ReservationStatus status);
+
+	@Query("""
+			select coalesce(sum(reservation.quantity), 0)
+			from StockReservation reservation
+			where reservation.inventoryItem.id = :itemId
+			  and reservation.warehouse.id = :warehouseId
+			  and ((:warehouseZoneId is null and reservation.warehouseZone is null)
+			    or reservation.warehouseZone.id = :warehouseZoneId)
+			  and reservation.status = :status
+			""")
+	BigDecimal sumQuantityByItemAndLocationAndStatus(
+			@Param("itemId") UUID itemId,
+			@Param("warehouseId") UUID warehouseId,
+			@Param("warehouseZoneId") UUID warehouseZoneId,
+			@Param("status") ReservationStatus status);
+
+	List<StockReservation> findAllByReferenceTypeAndReferenceId(String referenceType, String referenceId);
+
+	List<StockReservation> findAllByReferenceTypeAndReferenceIdAndStatus(
+			String referenceType,
+			String referenceId,
+			ReservationStatus status);
+
+	Optional<StockReservation> findByIdAndStatus(UUID id, ReservationStatus status);
+}
