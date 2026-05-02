@@ -23,6 +23,7 @@ import com.hospital.hospital.surgery.dto.ScheduleSurgeryRequest;
 import com.hospital.hospital.surgery.dto.SurgeryRequestResponse;
 import com.hospital.hospital.surgery.dto.SurgeryResponse;
 import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateResponse;
+import com.hospital.hospital.surgery.dto.UpdateSurgeryLifecycleRequest;
 import com.hospital.hospital.surgery.service.SurgeryService;
 
 import jakarta.validation.Valid;
@@ -74,6 +75,22 @@ public class SurgeryController {
 	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
 	public ApiResponse<SurgeryResponse> scheduleSurgery(@Valid @RequestBody ScheduleSurgeryRequest request) {
 		return ApiResponse.success("Surgery scheduled successfully", surgeryService.scheduleSurgery(request));
+	}
+
+	@PostMapping("/{id}/cancel")
+	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
+	public ApiResponse<SurgeryResponse> cancelSurgery(
+			@PathVariable UUID id,
+			@Valid @RequestBody UpdateSurgeryLifecycleRequest request) {
+		return ApiResponse.success("Surgery cancelled successfully", surgeryService.cancelSurgery(id, request));
+	}
+
+	@PostMapping("/{id}/complete")
+	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
+	public ApiResponse<SurgeryResponse> completeSurgery(
+			@PathVariable UUID id,
+			@Valid @RequestBody UpdateSurgeryLifecycleRequest request) {
+		return ApiResponse.success("Surgery completed successfully", surgeryService.completeSurgery(id, request));
 	}
 
 	@GetMapping("/{id}")

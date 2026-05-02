@@ -13,6 +13,6 @@ public interface SurgeryRepository extends JpaRepository<Surgery, UUID> {
 	boolean existsBySurgeryRequestId(UUID surgeryRequestId);
 
 	@Override
-	@EntityGraph(attributePaths = { "surgeryRequest", "patient", "primaryDoctor", "operatingRoom" })
+	@EntityGraph(attributePaths = { "surgeryRequest", "patient", "primaryDoctor", "operatingRoom", "supplyTemplate", "supplyTemplate.items" })
 	Optional<Surgery> findById(UUID id);
 }

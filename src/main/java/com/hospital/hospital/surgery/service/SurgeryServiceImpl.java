@@ -15,6 +15,9 @@ import com.hospital.hospital.doctor.model.Doctor;
 import com.hospital.hospital.doctor.repository.DoctorRepository;
 import com.hospital.hospital.encounter.model.Encounter;
 import com.hospital.hospital.encounter.repository.EncounterRepository;
+import com.hospital.hospital.inventory.exception.InventoryShortageException;
+import com.hospital.hospital.inventory.exception.InventorySyncException;
+import com.hospital.hospital.inventory.service.InventoryConsumptionClient;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.surgery.dto.CreateOperatingRoomRequest;
 import com.hospital.hospital.surgery.dto.CreateSurgeryRequestRequest;
@@ -27,6 +30,7 @@ import com.hospital.hospital.surgery.dto.SurgeryRequestResponse;
 import com.hospital.hospital.surgery.dto.SurgeryResponse;
 import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateItemRequest;
 import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateResponse;
+import com.hospital.hospital.surgery.dto.UpdateSurgeryLifecycleRequest;
 import com.hospital.hospital.surgery.model.DoctorProcedurePrivilege;
 import com.hospital.hospital.surgery.model.OperatingRoom;
 import com.hospital.hospital.surgery.model.Surgery;
@@ -56,6 +60,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 	private final SurgeryRepository surgeryRepository;
 	private final SurgeryTeamAssignmentRepository surgeryTeamAssignmentRepository;
 	private final SurgeryStatusHistoryRepository surgeryStatusHistoryRepository;
+	private final InventoryConsumptionClient inventoryConsumptionClient;
 
 	public SurgeryServiceImpl(
 			DepartmentRepository departmentRepository,
@@ -67,7 +72,8 @@ public class SurgeryServiceImpl implements SurgeryService {
 			SurgeryRequestRepository surgeryRequestRepository,
 			SurgeryRepository surgeryRepository,
 			SurgeryTeamAssignmentRepository surgeryTeamAssignmentRepository,
-			SurgeryStatusHistoryRepository surgeryStatusHistoryRepository) {
+			SurgeryStatusHistoryRepository surgeryStatusHistoryRepository,
+			InventoryConsumptionClient inventoryConsumptionClient) {
 		this.departmentRepository = departmentRepository;
 		this.doctorRepository = doctorRepository;
 		this.encounterRepository = encounterRepository;
@@ -78,6 +84,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 		this.surgeryRepository = surgeryRepository;
 		this.surgeryTeamAssignmentRepository = surgeryTeamAssignmentRepository;
 		this.surgeryStatusHistoryRepository = surgeryStatusHistoryRepository;
+		this.inventoryConsumptionClient = inventoryConsumptionClient;
 	}
 
 	@Override
@@ -215,6 +222,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 
 		surgeryRequest.setStatus("SCHEDULED");
 		surgeryRequestRepository.save(surgeryRequest);
+		tryReserveSurgeryInventory(savedSurgery);
 		return toResponse(savedSurgery);
 	}
 
@@ -224,6 +232,49 @@ public class SurgeryServiceImpl implements SurgeryService {
 		Surgery surgery = surgeryRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Surgery not found: " + id));
 		return toResponse(surgery);
+	}
+
+	@Override
+	@Transactional
+	public SurgeryResponse cancelSurgery(UUID id, UpdateSurgeryLifecycleRequest request) {
+		Surgery surgery = surgeryRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Surgery not found: " + id));
+		if ("COMPLETED".equalsIgnoreCase(surgery.getStatus())) {
+			throw new BusinessRuleViolationException("Completed surgeries cannot be cancelled");
+		}
+		surgery.setStatus("CANCELLED");
+		surgery.setNote(trimToNull(request.getNote()));
+		try {
+			inventoryConsumptionClient.releaseSurgeryReservations(surgery);
+			surgery.setInventoryStatus("RELEASED");
+			appendStatusHistory(surgery, "CANCELLED", "Surgery cancelled and reservations released");
+		} catch (InventorySyncException exception) {
+			surgery.setInventoryStatus("RELEASE_PENDING");
+			appendStatusHistory(surgery, "CANCELLED", "Surgery cancelled with pending inventory release");
+		}
+		return toResponse(surgeryRepository.save(surgery));
+	}
+
+	@Override
+	@Transactional
+	public SurgeryResponse completeSurgery(UUID id, UpdateSurgeryLifecycleRequest request) {
+		Surgery surgery = surgeryRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Surgery not found: " + id));
+		if ("CANCELLED".equalsIgnoreCase(surgery.getStatus())) {
+			throw new BusinessRuleViolationException("Cancelled surgeries cannot be completed");
+		}
+		surgery.setStatus("COMPLETED");
+		surgery.setNote(trimToNull(request.getNote()));
+		try {
+			inventoryConsumptionClient.releaseSurgeryReservations(surgery);
+			inventoryConsumptionClient.consumeSurgerySupplies(surgery);
+			surgery.setInventoryStatus("CONSUMED");
+			appendStatusHistory(surgery, "COMPLETED", "Surgery completed and supplies consumed");
+		} catch (InventoryShortageException | InventorySyncException exception) {
+			surgery.setInventoryStatus("PENDING_CONSUMPTION");
+			appendStatusHistory(surgery, "COMPLETED", "Surgery completed with pending inventory consumption");
+		}
+		return toResponse(surgeryRepository.save(surgery));
 	}
 
 	private OperatingRoomResponse toResponse(OperatingRoom operatingRoom) {
@@ -279,6 +330,30 @@ public class SurgeryServiceImpl implements SurgeryService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isBlank() ? null : trimmed;
+	}
+
+	private void tryReserveSurgeryInventory(Surgery surgery) {
+		try {
+			inventoryConsumptionClient.reserveSurgerySupplies(surgery);
+			surgery.setInventoryStatus("RESERVED");
+			appendStatusHistory(surgery, surgery.getStatus(), "Surgery supplies reserved");
+		} catch (InventoryShortageException exception) {
+			surgery.setInventoryStatus("SHORTAGE");
+			appendStatusHistory(surgery, surgery.getStatus(), "Surgery planned with supply shortage");
+		} catch (InventorySyncException exception) {
+			surgery.setInventoryStatus("PENDING");
+			appendStatusHistory(surgery, surgery.getStatus(), "Surgery planned with pending inventory reservation");
+		}
+		surgeryRepository.save(surgery);
+	}
+
+	private void appendStatusHistory(Surgery surgery, String status, String note) {
+		SurgeryStatusHistory history = new SurgeryStatusHistory();
+		history.setSurgery(surgery);
+		history.setStatus(status);
+		history.setChangedAt(Instant.now());
+		history.setNote(note);
+		surgeryStatusHistoryRepository.save(history);
 	}
 
 	private DoctorProcedurePrivilegeResponse toResponse(DoctorProcedurePrivilege privilege) {

@@ -12,6 +12,7 @@ import com.hospital.hospital.surgery.dto.ScheduleSurgeryRequest;
 import com.hospital.hospital.surgery.dto.SurgeryRequestResponse;
 import com.hospital.hospital.surgery.dto.SurgeryResponse;
 import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateResponse;
+import com.hospital.hospital.surgery.dto.UpdateSurgeryLifecycleRequest;
 
 public interface SurgeryService {
 
@@ -26,4 +27,8 @@ public interface SurgeryService {
 	SurgeryResponse scheduleSurgery(ScheduleSurgeryRequest request);
 
 	SurgeryResponse getSurgeryById(UUID id);
+
+	SurgeryResponse cancelSurgery(UUID id, UpdateSurgeryLifecycleRequest request);
+
+	SurgeryResponse completeSurgery(UUID id, UpdateSurgeryLifecycleRequest request);
 }

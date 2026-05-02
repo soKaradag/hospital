@@ -1,6 +1,7 @@
 package com.hospital.inventory.stock.repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +44,13 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
 			@Param("warehouseId") UUID warehouseId,
 			@Param("warehouseZoneId") UUID warehouseZoneId,
 			@Param("status") ReservationStatus status);
+
+	List<StockReservation> findAllByReferenceTypeAndReferenceId(String referenceType, String referenceId);
+
+	List<StockReservation> findAllByReferenceTypeAndReferenceIdAndStatus(
+			String referenceType,
+			String referenceId,
+			ReservationStatus status);
 
 	Optional<StockReservation> findByIdAndStatus(UUID id, ReservationStatus status);
 }
