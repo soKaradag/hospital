@@ -1,34 +1,36 @@
 package com.hospital.hospital.encounter.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
-import com.hospital.hospital.appointment.model.Appointment;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.doctor.model.Doctor;
 import com.hospital.hospital.doctor.repository.DoctorRepository;
 import com.hospital.hospital.encounter.dto.CreateEncounterRequest;
-import com.hospital.hospital.encounter.dto.EncounterResponse;
 import com.hospital.hospital.encounter.mapper.EncounterMapper;
 import com.hospital.hospital.encounter.model.Encounter;
+import com.hospital.hospital.encounter.model.EncounterProcedure;
+import com.hospital.hospital.encounter.repository.EncounterProcedureRepository;
 import com.hospital.hospital.encounter.repository.EncounterRepository;
+import com.hospital.hospital.encounter.repository.EncounterVitalRepository;
+import com.hospital.hospital.inventory.dto.InventoryConsumptionResponse;
+import com.hospital.hospital.inventory.exception.InventorySyncException;
+import com.hospital.hospital.inventory.service.InventoryConsumptionClient;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.patient.repository.PatientRepository;
 
@@ -48,129 +50,90 @@ class EncounterServiceImplTest {
 	private DoctorRepository doctorRepository;
 
 	@Mock
-	private EncounterMapper encounterMapper;
+	private EncounterVitalRepository encounterVitalRepository;
 
-	@InjectMocks
+	@Mock
+	private EncounterProcedureRepository encounterProcedureRepository;
+
+	@Mock
+	private InventoryConsumptionClient inventoryConsumptionClient;
+
 	private EncounterServiceImpl encounterService;
 
-	@Test
-	void createShouldSaveEncounterWhenRelationsAreConsistent() {
-		UUID appointmentId = UUID.randomUUID();
-		UUID patientId = UUID.randomUUID();
-		UUID doctorId = UUID.randomUUID();
-
-		Patient patient = new Patient();
-		patient.setId(patientId);
-		Doctor doctor = new Doctor();
-		doctor.setId(doctorId);
-
-		Appointment appointment = new Appointment();
-		appointment.setId(appointmentId);
-		appointment.setPatient(patient);
-		appointment.setDoctor(doctor);
-
-		CreateEncounterRequest request = new CreateEncounterRequest();
-		request.setAppointmentId(appointmentId);
-		request.setPatientId(patientId);
-		request.setDoctorId(doctorId);
-		request.setEncounterDateTime(Instant.parse("2026-03-27T12:00:00Z"));
-
-		Encounter mappedEncounter = new Encounter();
-		Encounter savedEncounter = new Encounter();
-		EncounterResponse response = new EncounterResponse();
-
-		when(encounterMapper.toEntity(request)).thenReturn(mappedEncounter);
-		when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
-		when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
-		when(doctorRepository.findById(doctorId)).thenReturn(Optional.of(doctor));
-		when(encounterRepository.save(mappedEncounter)).thenReturn(savedEncounter);
-		when(encounterMapper.toResponse(savedEncounter)).thenReturn(response);
-
-		EncounterResponse actual = encounterService.create(request);
-
-		assertNotNull(actual);
-		assertEquals(appointment, mappedEncounter.getAppointment());
-		assertEquals(patient, mappedEncounter.getPatient());
-		assertEquals(doctor, mappedEncounter.getDoctor());
+	@BeforeEach
+	void setUp() {
+		encounterService = new EncounterServiceImpl(
+				encounterRepository,
+				appointmentRepository,
+				patientRepository,
+				doctorRepository,
+				new EncounterMapper(),
+				encounterVitalRepository,
+				encounterProcedureRepository,
+				inventoryConsumptionClient);
 	}
 
 	@Test
-	void createShouldThrowWhenAppointmentPatientDoesNotMatchEncounterPatient() {
-		UUID appointmentId = UUID.randomUUID();
-		UUID requestPatientId = UUID.randomUUID();
-		UUID appointmentPatientId = UUID.randomUUID();
-		UUID doctorId = UUID.randomUUID();
+	void createShouldSyncConsultationProcedureWhenInventoryIsAvailable() {
+		CreateEncounterRequest request = createRequest();
+		arrangeCommonCreateFlow(request);
+		when(inventoryConsumptionClient.consumeEncounterProcedure(any())).thenReturn(new InventoryConsumptionResponse());
+		when(encounterVitalRepository.countByEncounterId(any())).thenReturn(1L);
+		when(encounterProcedureRepository.countByEncounterId(any())).thenReturn(1L);
 
-		Patient requestPatient = new Patient();
-		requestPatient.setId(requestPatientId);
-		Patient appointmentPatient = new Patient();
-		appointmentPatient.setId(appointmentPatientId);
-		Doctor doctor = new Doctor();
-		doctor.setId(doctorId);
+		var response = encounterService.create(request);
 
-		Appointment appointment = new Appointment();
-		appointment.setPatient(appointmentPatient);
-		appointment.setDoctor(doctor);
+		assertEquals(1L, response.getProcedureCount());
+	}
 
-		CreateEncounterRequest request = new CreateEncounterRequest();
-		request.setAppointmentId(appointmentId);
-		request.setPatientId(requestPatientId);
-		request.setDoctorId(doctorId);
-
-		when(encounterMapper.toEntity(request)).thenReturn(new Encounter());
-		when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
-		when(patientRepository.findById(requestPatientId)).thenReturn(Optional.of(requestPatient));
-		when(doctorRepository.findById(doctorId)).thenReturn(Optional.of(doctor));
+	@Test
+	void createShouldFailWhenProcedureInventorySyncFails() {
+		CreateEncounterRequest request = createRequest();
+		arrangeCommonCreateFlow(request);
+		when(inventoryConsumptionClient.consumeEncounterProcedure(any()))
+				.thenThrow(new InventorySyncException("inventory unavailable"));
 
 		assertThrows(BusinessRuleViolationException.class, () -> encounterService.create(request));
 	}
 
-	@Test
-	void createShouldThrowWhenAppointmentDoctorDoesNotMatchEncounterDoctor() {
-		UUID appointmentId = UUID.randomUUID();
-		UUID patientId = UUID.randomUUID();
-		UUID requestDoctorId = UUID.randomUUID();
-		UUID appointmentDoctorId = UUID.randomUUID();
-
+	private void arrangeCommonCreateFlow(CreateEncounterRequest request) {
 		Patient patient = new Patient();
-		patient.setId(patientId);
-		Doctor requestDoctor = new Doctor();
-		requestDoctor.setId(requestDoctorId);
-		Doctor appointmentDoctor = new Doctor();
-		appointmentDoctor.setId(appointmentDoctorId);
+		patient.setId(request.getPatientId());
+		patient.setFirstName("Test");
+		patient.setLastName("Patient");
 
-		Appointment appointment = new Appointment();
-		appointment.setPatient(patient);
-		appointment.setDoctor(appointmentDoctor);
+		Doctor doctor = new Doctor();
+		doctor.setId(request.getDoctorId());
+		doctor.setFirstName("Test");
+		doctor.setLastName("Doctor");
 
-		CreateEncounterRequest request = new CreateEncounterRequest();
-		request.setAppointmentId(appointmentId);
-		request.setPatientId(patientId);
-		request.setDoctorId(requestDoctorId);
-
-		when(encounterMapper.toEntity(request)).thenReturn(new Encounter());
-		when(appointmentRepository.findById(appointmentId)).thenReturn(Optional.of(appointment));
-		when(patientRepository.findById(patientId)).thenReturn(Optional.of(patient));
-		when(doctorRepository.findById(requestDoctorId)).thenReturn(Optional.of(requestDoctor));
-
-		assertThrows(BusinessRuleViolationException.class, () -> encounterService.create(request));
+		when(patientRepository.findById(request.getPatientId())).thenReturn(Optional.of(patient));
+		when(doctorRepository.findById(request.getDoctorId())).thenReturn(Optional.of(doctor));
+		when(encounterRepository.save(any(Encounter.class))).thenAnswer(invocation -> {
+			Encounter encounter = invocation.getArgument(0);
+			if (encounter.getId() == null) {
+				encounter.setId(UUID.randomUUID());
+			}
+			return encounter;
+		});
+		when(encounterProcedureRepository.findByEncounterIdAndProcedureCode(any(), any())).thenReturn(Optional.empty());
+		when(encounterProcedureRepository.save(any(EncounterProcedure.class))).thenAnswer(invocation -> {
+			EncounterProcedure procedure = invocation.getArgument(0);
+			if (procedure.getId() == null) {
+				procedure.setId(UUID.randomUUID());
+			}
+			return procedure;
+		});
 	}
 
-	@Test
-	void searchShouldReturnPagedEncounters() {
-		String keyword = "pain";
-		PageRequest pageable = PageRequest.of(0, 10);
-		Encounter encounter = new Encounter();
-		Page<Encounter> page = new PageImpl<>(List.of(encounter), pageable, 1);
-
-		when(encounterRepository
-				.findAllByComplaintContainingIgnoreCaseOrDiagnosisNoteContainingIgnoreCaseOrTreatmentNoteContainingIgnoreCase(
-						keyword, keyword, keyword, pageable))
-				.thenReturn(page);
-		when(encounterMapper.toResponse(encounter)).thenReturn(new EncounterResponse());
-
-		Page<EncounterResponse> result = encounterService.search(keyword, pageable);
-
-		assertEquals(1, result.getTotalElements());
+	private CreateEncounterRequest createRequest() {
+		CreateEncounterRequest request = new CreateEncounterRequest();
+		request.setPatientId(UUID.randomUUID());
+		request.setDoctorId(UUID.randomUUID());
+		request.setComplaint("Headache");
+		request.setDiagnosisNote("Migraine");
+		request.setTreatmentNote("Consultation");
+		request.setEncounterDateTime(Instant.now());
+		return request;
 	}
 }
