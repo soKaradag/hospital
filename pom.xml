@@ -65,6 +65,11 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
 		</dependency>
+		<!-- Flyway'in MySQL veritabanı ailesini tanıyıp migration çalıştırabilmesi için gerekir -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
 		<!-- Uygulamanın MySQL veritabanına bağlanması için gereken JDBC sürücüsü -->
 		<dependency>
 			<groupId>com.mysql</groupId>
