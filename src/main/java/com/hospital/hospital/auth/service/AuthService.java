@@ -18,4 +18,6 @@ public interface AuthService {
 
 	// Request context içine yazılmış access token sahibini kullanarak mevcut kullanıcı bilgisini döner.
 	CurrentUserResponse me();
+
+	CurrentUserResponse introspect();
 }

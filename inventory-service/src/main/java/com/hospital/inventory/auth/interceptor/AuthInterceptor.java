@@ -1,32 +1,27 @@
-package com.hospital.hospital.auth.interceptor;
+package com.hospital.inventory.auth.interceptor;
 
 import java.util.Arrays;
+import java.util.Set;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import com.hospital.hospital.auth.annotation.RequireAuthentication;
-import com.hospital.hospital.auth.annotation.RequirePermission;
-import com.hospital.hospital.auth.context.CurrentUserContext;
-import com.hospital.hospital.auth.service.AuthorizationService;
-import com.hospital.hospital.auth.token.InvalidTokenException;
-import com.hospital.hospital.auth.token.JwtTokenService;
-import com.hospital.hospital.auth.token.TokenPrincipal;
-import com.hospital.hospital.common.exception.UnauthorizedException;
-
+import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
-import org.springframework.stereotype.Component;
+
+import com.hospital.inventory.auth.annotation.RequirePermission;
+import com.hospital.inventory.auth.context.CurrentUserContext;
+import com.hospital.inventory.auth.dto.AuthenticatedUserResponse;
+import com.hospital.inventory.auth.service.AuthorizationService;
+import com.hospital.inventory.auth.service.CoreAuthIntrospectionClient;
+import com.hospital.inventory.auth.token.InvalidTokenException;
+import com.hospital.inventory.auth.token.JwtTokenService;
+import com.hospital.inventory.auth.token.TokenPrincipal;
+import com.hospital.inventory.common.exception.UnauthorizedException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/*
-- Bu interceptor, korumalı endpoint'lere gelen access token'ı request girişinde doğrular.
-- Token çözümleme controller ve service katmanlarından çıkarılarak merkezi hale getirilir.
-- Login ve refresh gibi public endpoint'ler burada hariç tutulur.
-*/
 @Component
-@ConditionalOnBean(JwtTokenService.class)
 public class AuthInterceptor implements HandlerInterceptor {
 
 	private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -34,14 +29,17 @@ public class AuthInterceptor implements HandlerInterceptor {
 
 	private final JwtTokenService jwtTokenService;
 	private final CurrentUserContext currentUserContext;
+	private final CoreAuthIntrospectionClient coreAuthIntrospectionClient;
 	private final AuthorizationService authorizationService;
 
 	public AuthInterceptor(
 			JwtTokenService jwtTokenService,
 			CurrentUserContext currentUserContext,
+			CoreAuthIntrospectionClient coreAuthIntrospectionClient,
 			AuthorizationService authorizationService) {
 		this.jwtTokenService = jwtTokenService;
 		this.currentUserContext = currentUserContext;
+		this.coreAuthIntrospectionClient = coreAuthIntrospectionClient;
 		this.authorizationService = authorizationService;
 	}
 
@@ -51,35 +49,31 @@ public class AuthInterceptor implements HandlerInterceptor {
 			return true;
 		}
 
-		if (isPublicAuthEndpoint(request)) {
+		if (!hasPermissionRequirement(handlerMethod)) {
 			return true;
 		}
 
-		boolean authenticationRequired = requiresAuthentication(handlerMethod);
-		if (!authenticationRequired) {
-			return true;
-		}
-
-		String token = extractBearerToken(request.getHeader(AUTHORIZATION_HEADER));
+		String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
+		String token = extractBearerToken(authorizationHeader);
 		try {
 			TokenPrincipal principal = jwtTokenService.parseAccessToken(token);
 			currentUserContext.setPrincipal(principal);
-			if (hasPermissionRequirement(handlerMethod)) {
-				authorizeIfRequired(handlerMethod);
+
+			AuthenticatedUserResponse authenticatedUser = coreAuthIntrospectionClient.introspect(authorizationHeader);
+			if (!principal.userId().equals(authenticatedUser.getId())) {
+				throw new UnauthorizedException("Introspection result does not match access token subject");
 			}
+
+			currentUserContext.setUser(authenticatedUser);
+			currentUserContext.setRoles(authenticatedUser.getRoles() != null ? authenticatedUser.getRoles() : java.util.List.of());
+			currentUserContext.setPermissions(filterInventoryPermissions(authenticatedUser));
+			authorizeIfRequired(handlerMethod);
 			return true;
 		} catch (InvalidTokenException exception) {
 			throw new UnauthorizedException(exception.getMessage());
 		}
 	}
 
-	// Faz 2'nin bu aşamasında login ve refresh endpoint'leri anonim erişime açıktır.
-	private boolean isPublicAuthEndpoint(HttpServletRequest request) {
-		String requestUri = request.getRequestURI();
-		return "/api/auth/login".equals(requestUri) || "/api/auth/refresh".equals(requestUri);
-	}
-
-	// Annotation method seviyesinde aranır; bulunmazsa class seviyesindeki kural kullanılır.
 	private void authorizeIfRequired(HandlerMethod handlerMethod) {
 		RequirePermission requirePermission = AnnotatedElementUtils.findMergedAnnotation(
 				handlerMethod.getMethod(),
@@ -100,17 +94,15 @@ public class AuthInterceptor implements HandlerInterceptor {
 				|| AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(), RequirePermission.class) != null;
 	}
 
-	private boolean hasAuthenticationRequirement(HandlerMethod handlerMethod) {
-		return AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), RequireAuthentication.class) != null
-				|| AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getBeanType(),
-						RequireAuthentication.class) != null;
+	private Set<String> filterInventoryPermissions(AuthenticatedUserResponse authenticatedUser) {
+		if (authenticatedUser.getPermissions() == null) {
+			return Set.of();
+		}
+		return authenticatedUser.getPermissions().stream()
+				.filter(code -> code != null && code.startsWith("inventory."))
+				.collect(java.util.stream.Collectors.toSet());
 	}
 
-	private boolean requiresAuthentication(HandlerMethod handlerMethod) {
-		return hasPermissionRequirement(handlerMethod) || hasAuthenticationRequirement(handlerMethod);
-	}
-
-	// Bearer token çıkarma işlemi request girişinde tek yerde yapılır; böylece service katmanı sadeleşir.
 	private String extractBearerToken(String authorizationHeader) {
 		if (authorizationHeader == null || authorizationHeader.isBlank()) {
 			throw new UnauthorizedException("Authorization header is required");

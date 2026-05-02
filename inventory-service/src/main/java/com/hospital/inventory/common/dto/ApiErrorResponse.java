@@ -7,11 +7,14 @@ import com.hospital.inventory.common.exception.ErrorCode;
 
 public class ApiErrorResponse {
 
-	private final boolean success;
-	private final ErrorCode code;
-	private final String message;
-	private final List<ValidationErrorDetail> errors;
-	private final Instant timestamp;
+	private boolean success;
+	private ErrorCode code;
+	private String message;
+	private List<ValidationErrorDetail> errors;
+	private Instant timestamp;
+
+	public ApiErrorResponse() {
+	}
 
 	private ApiErrorResponse(
 			boolean success,
@@ -34,19 +37,39 @@ public class ApiErrorResponse {
 		return success;
 	}
 
+	public void setSuccess(boolean success) {
+		this.success = success;
+	}
+
 	public ErrorCode getCode() {
 		return code;
+	}
+
+	public void setCode(ErrorCode code) {
+		this.code = code;
 	}
 
 	public String getMessage() {
 		return message;
 	}
 
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
 	public List<ValidationErrorDetail> getErrors() {
 		return errors;
 	}
 
+	public void setErrors(List<ValidationErrorDetail> errors) {
+		this.errors = errors;
+	}
+
 	public Instant getTimestamp() {
 		return timestamp;
+	}
+
+	public void setTimestamp(Instant timestamp) {
+		this.timestamp = timestamp;
 	}
 }

@@ -108,6 +108,16 @@ public class AuthServiceImpl implements AuthService {
 	// Veritabanından tekrar okuma yapılmasının nedeni, token içeriğine körü körüne güvenmek yerine güncel kullanıcı kaydını kullanmaktır.
 	@Audit(action = "GET_CURRENT_USER", entity = "AUTH", description = "Current authenticated user lookup")
 	public CurrentUserResponse me() {
+		return buildCurrentUserResponse();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public CurrentUserResponse introspect() {
+		return buildCurrentUserResponse();
+	}
+
+	private CurrentUserResponse buildCurrentUserResponse() {
 		if (!currentUserContext.isAuthenticated()) {
 			throw new UnauthorizedException("Authenticated user not found in current request");
 		}

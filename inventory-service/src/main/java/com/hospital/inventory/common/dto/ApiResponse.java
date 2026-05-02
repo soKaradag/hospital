@@ -4,10 +4,13 @@ import java.time.Instant;
 
 public class ApiResponse<T> {
 
-	private final boolean success;
-	private final String message;
-	private final T data;
-	private final Instant timestamp;
+	private boolean success;
+	private String message;
+	private T data;
+	private Instant timestamp;
+
+	public ApiResponse() {
+	}
 
 	private ApiResponse(boolean success, String message, T data, Instant timestamp) {
 		this.success = success;
@@ -24,15 +27,31 @@ public class ApiResponse<T> {
 		return success;
 	}
 
+	public void setSuccess(boolean success) {
+		this.success = success;
+	}
+
 	public String getMessage() {
 		return message;
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
 	}
 
 	public T getData() {
 		return data;
 	}
 
+	public void setData(T data) {
+		this.data = data;
+	}
+
 	public Instant getTimestamp() {
 		return timestamp;
+	}
+
+	public void setTimestamp(Instant timestamp) {
+		this.timestamp = timestamp;
 	}
 }
