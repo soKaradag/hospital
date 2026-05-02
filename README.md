@@ -87,6 +87,7 @@ Detayli aciklamalar `docs` klasoru altindadir:
 - [Tarih ve Saat Kurallari](docs/date-time-conventions.md)
 - [Faz 3 - 48 Tabloya Gecis Plani](docs/phase-3-48-table-transition.md)
 - [Faz 3 - Uygulama Yurutme Plani](docs/phase-3-execution-plan.md)
+- [Faz 4 - Inventory Service Tasarimi](docs/phase-4-inventory-service-design.md)
 
 ## Sonraki Yon
 - Kalan ana is cleanup ve contract sabitlemedir.
