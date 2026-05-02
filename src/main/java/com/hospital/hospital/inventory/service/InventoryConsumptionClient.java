@@ -20,6 +20,7 @@ import com.hospital.hospital.auth.context.CurrentUserContext;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.inventory.dto.InventoryConsumptionRequest;
 import com.hospital.hospital.inventory.dto.InventoryConsumptionResponse;
+import com.hospital.hospital.encounter.model.EncounterProcedure;
 import com.hospital.hospital.inventory.exception.InventoryShortageException;
 import com.hospital.hospital.inventory.exception.InventorySyncException;
 import com.hospital.hospital.prescription.model.PrescriptionDispense;
@@ -37,33 +38,68 @@ public class InventoryConsumptionClient {
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 	private final String prescriptionWarehouseCode;
 	private final String prescriptionWarehouseZoneCode;
+	private final String procedureWarehouseCode;
+	private final String procedureWarehouseZoneCode;
 
 	public InventoryConsumptionClient(
 			RestClient.Builder restClientBuilder,
 			CurrentUserContext currentUserContext,
 			@Value("${inventory.service.base-url}") String inventoryBaseUrl,
 			@Value("${inventory.prescription.warehouse-code}") String prescriptionWarehouseCode,
-			@Value("${inventory.prescription.warehouse-zone-code}") String prescriptionWarehouseZoneCode) {
+			@Value("${inventory.prescription.warehouse-zone-code}") String prescriptionWarehouseZoneCode,
+			@Value("${inventory.procedure.warehouse-code}") String procedureWarehouseCode,
+			@Value("${inventory.procedure.warehouse-zone-code}") String procedureWarehouseZoneCode) {
 		this.restClient = restClientBuilder.baseUrl(inventoryBaseUrl).build();
 		this.currentUserContext = currentUserContext;
 		this.prescriptionWarehouseCode = prescriptionWarehouseCode;
 		this.prescriptionWarehouseZoneCode = prescriptionWarehouseZoneCode;
+		this.procedureWarehouseCode = procedureWarehouseCode;
+		this.procedureWarehouseZoneCode = procedureWarehouseZoneCode;
 	}
 
 	public InventoryConsumptionResponse consumePrescriptionDispense(PrescriptionItem item, PrescriptionDispense dispense) {
+		return consume(
+				item.getMedication().getCode(),
+				prescriptionWarehouseCode,
+				prescriptionWarehouseZoneCode,
+				BigDecimal.valueOf(dispense.getQuantity()),
+				"prescription_dispense",
+				dispense.getId() != null ? dispense.getId().toString() : item.getId().toString(),
+				"Prescription dispense for prescription " + item.getPrescription().getId());
+	}
+
+	public InventoryConsumptionResponse consumeEncounterProcedure(EncounterProcedure procedure) {
+		return consume(
+				procedure.getProcedureCode(),
+				procedureWarehouseCode,
+				procedureWarehouseZoneCode,
+				BigDecimal.ONE,
+				"encounter_procedure",
+				procedure.getId() != null ? procedure.getId().toString() : procedure.getEncounter().getId().toString(),
+				"Encounter procedure for encounter " + procedure.getEncounter().getId());
+	}
+
+	private InventoryConsumptionResponse consume(
+			String inventoryItemCode,
+			String warehouseCode,
+			String warehouseZoneCode,
+			BigDecimal quantity,
+			String referenceType,
+			String referenceId,
+			String notes) {
 		String accessToken = currentUserContext.getRawAccessToken();
 		if (accessToken == null || accessToken.isBlank()) {
 			throw new InventorySyncException("Inventory consumption requires the current access token");
 		}
 
 		InventoryConsumptionRequest request = new InventoryConsumptionRequest();
-		request.setInventoryItemCode(item.getMedication().getCode());
-		request.setWarehouseCode(prescriptionWarehouseCode);
-		request.setWarehouseZoneCode(prescriptionWarehouseZoneCode);
-		request.setQuantity(BigDecimal.valueOf(dispense.getQuantity()));
-		request.setReferenceType("prescription_dispense");
-		request.setReferenceId(dispense.getId() != null ? dispense.getId().toString() : item.getId().toString());
-		request.setNotes("Prescription dispense for prescription " + item.getPrescription().getId());
+		request.setInventoryItemCode(inventoryItemCode);
+		request.setWarehouseCode(warehouseCode);
+		request.setWarehouseZoneCode(warehouseZoneCode);
+		request.setQuantity(quantity);
+		request.setReferenceType(referenceType);
+		request.setReferenceId(referenceId);
+		request.setNotes(notes);
 
 		try {
 			ApiResponse<InventoryConsumptionResponse> response = restClient.post()

@@ -24,6 +24,9 @@ import com.hospital.hospital.encounter.model.EncounterVital;
 import com.hospital.hospital.encounter.repository.EncounterProcedureRepository;
 import com.hospital.hospital.encounter.repository.EncounterRepository;
 import com.hospital.hospital.encounter.repository.EncounterVitalRepository;
+import com.hospital.hospital.inventory.exception.InventoryShortageException;
+import com.hospital.hospital.inventory.exception.InventorySyncException;
+import com.hospital.hospital.inventory.service.InventoryConsumptionClient;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.patient.repository.PatientRepository;
 
@@ -37,10 +40,12 @@ public class EncounterServiceImpl implements EncounterService {
 	private final EncounterMapper encounterMapper;
 	private final EncounterVitalRepository encounterVitalRepository;
 	private final EncounterProcedureRepository encounterProcedureRepository;
+	private final InventoryConsumptionClient inventoryConsumptionClient;
 
 	public EncounterServiceImpl(EncounterRepository encounterRepository, AppointmentRepository appointmentRepository,
 			PatientRepository patientRepository, DoctorRepository doctorRepository, EncounterMapper encounterMapper,
-			EncounterVitalRepository encounterVitalRepository, EncounterProcedureRepository encounterProcedureRepository) {
+			EncounterVitalRepository encounterVitalRepository, EncounterProcedureRepository encounterProcedureRepository,
+			InventoryConsumptionClient inventoryConsumptionClient) {
 		this.encounterRepository = encounterRepository;
 		this.appointmentRepository = appointmentRepository;
 		this.patientRepository = patientRepository;
@@ -48,6 +53,7 @@ public class EncounterServiceImpl implements EncounterService {
 		this.encounterMapper = encounterMapper;
 		this.encounterVitalRepository = encounterVitalRepository;
 		this.encounterProcedureRepository = encounterProcedureRepository;
+		this.inventoryConsumptionClient = inventoryConsumptionClient;
 	}
 
 	@Override
@@ -186,12 +192,27 @@ public class EncounterServiceImpl implements EncounterService {
 		EncounterProcedure procedure = encounterProcedureRepository
 				.findByEncounterIdAndProcedureCode(encounter.getId(), "CONSULTATION")
 				.orElseGet(EncounterProcedure::new);
+		boolean isNew = procedure.getId() == null;
 		procedure.setEncounter(encounter);
 		procedure.setProcedureCode("CONSULTATION");
 		procedure.setProcedureName("Consultation");
 		procedure.setPerformedAt(encounter.getEncounterDateTime());
 		procedure.setNote(encounter.getTreatmentNote());
-		encounterProcedureRepository.save(procedure);
+		EncounterProcedure savedProcedure = encounterProcedureRepository.save(procedure);
+		if (isNew) {
+			syncProcedureInventory(savedProcedure);
+		}
+	}
+
+	private void syncProcedureInventory(EncounterProcedure procedure) {
+		try {
+			inventoryConsumptionClient.consumeEncounterProcedure(procedure);
+		} catch (InventoryShortageException exception) {
+			throw new BusinessRuleViolationException("Encounter procedure stock shortage: " + exception.getMessage());
+		} catch (InventorySyncException exception) {
+			throw new BusinessRuleViolationException(
+					"Encounter procedure inventory sync failed: " + exception.getMessage());
+		}
 	}
 
 	private EncounterResponse toResponse(Encounter encounter) {
