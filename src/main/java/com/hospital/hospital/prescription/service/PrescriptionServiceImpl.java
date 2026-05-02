@@ -15,6 +15,9 @@ import com.hospital.hospital.doctor.model.Doctor;
 import com.hospital.hospital.doctor.repository.DoctorRepository;
 import com.hospital.hospital.encounter.model.Encounter;
 import com.hospital.hospital.encounter.repository.EncounterRepository;
+import com.hospital.hospital.inventory.exception.InventoryShortageException;
+import com.hospital.hospital.inventory.exception.InventorySyncException;
+import com.hospital.hospital.inventory.service.InventoryConsumptionClient;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.patient.repository.PatientRepository;
 import com.hospital.hospital.prescription.dto.CreatePrescriptionRequest;
@@ -38,6 +41,10 @@ import com.hospital.hospital.prescription.repository.PrescriptionRepository;
 @Service
 public class PrescriptionServiceImpl implements PrescriptionService {
 
+	private static final String DISPENSE_COMPLETED = "COMPLETED";
+	private static final String DISPENSE_PENDING_INVENTORY = "PENDING_INVENTORY";
+	private static final String DISPENSE_INVENTORY_SHORTAGE = "INVENTORY_SHORTAGE";
+
 	private final PrescriptionRepository prescriptionRepository;
 	private final EncounterRepository encounterRepository;
 	private final PatientRepository patientRepository;
@@ -46,6 +53,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	private final MedicationRepository medicationRepository;
 	private final PrescriptionItemRepository prescriptionItemRepository;
 	private final PrescriptionDispenseRepository prescriptionDispenseRepository;
+	private final InventoryConsumptionClient inventoryConsumptionClient;
 
 	public PrescriptionServiceImpl(
 			PrescriptionRepository prescriptionRepository,
@@ -55,7 +63,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 			PrescriptionMapper prescriptionMapper,
 			MedicationRepository medicationRepository,
 			PrescriptionItemRepository prescriptionItemRepository,
-			PrescriptionDispenseRepository prescriptionDispenseRepository) {
+			PrescriptionDispenseRepository prescriptionDispenseRepository,
+			InventoryConsumptionClient inventoryConsumptionClient) {
 		this.prescriptionRepository = prescriptionRepository;
 		this.encounterRepository = encounterRepository;
 		this.patientRepository = patientRepository;
@@ -64,6 +73,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 		this.medicationRepository = medicationRepository;
 		this.prescriptionItemRepository = prescriptionItemRepository;
 		this.prescriptionDispenseRepository = prescriptionDispenseRepository;
+		this.inventoryConsumptionClient = inventoryConsumptionClient;
 	}
 
 	@Override
@@ -202,11 +212,27 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 	private void syncDispense(PrescriptionItem item) {
 		PrescriptionDispense dispense = prescriptionDispenseRepository.findFirstByPrescriptionItemId(item.getId())
 				.orElseGet(PrescriptionDispense::new);
+		boolean alreadyCompleted = DISPENSE_COMPLETED.equalsIgnoreCase(dispense.getStatus());
 		dispense.setPrescriptionItem(item);
 		dispense.setDispensedAt(java.time.Instant.now());
 		dispense.setQuantity(14);
-		dispense.setStatus("PENDING");
-		dispense.setNote("Auto-created dispense placeholder");
+		if (alreadyCompleted) {
+			dispense.setStatus(DISPENSE_COMPLETED);
+			dispense.setNote("Inventory consumption already completed");
+			prescriptionDispenseRepository.save(dispense);
+			return;
+		}
+		try {
+			inventoryConsumptionClient.consumePrescriptionDispense(item, dispense);
+			dispense.setStatus(DISPENSE_COMPLETED);
+			dispense.setNote("Inventory consumption completed");
+		} catch (InventoryShortageException exception) {
+			dispense.setStatus(DISPENSE_INVENTORY_SHORTAGE);
+			dispense.setNote(exception.getMessage());
+		} catch (InventorySyncException exception) {
+			dispense.setStatus(DISPENSE_PENDING_INVENTORY);
+			dispense.setNote(exception.getMessage());
+		}
 		prescriptionDispenseRepository.save(dispense);
 	}
 

@@ -15,15 +15,24 @@ import org.springframework.web.context.annotation.RequestScope;
 public class CurrentUserContext {
 
 	private TokenPrincipal principal;
+	private String rawAccessToken;
 
 	// Interceptor token'ı doğruladığında çözülen kullanıcı bilgisi buraya yazılır.
 	public void setPrincipal(TokenPrincipal principal) {
 		this.principal = principal;
 	}
 
+	public void setRawAccessToken(String rawAccessToken) {
+		this.rawAccessToken = rawAccessToken;
+	}
+
 	// Service veya authorization katmanı mevcut kullanıcıyı buradan okuyabilir.
 	public TokenPrincipal getPrincipal() {
 		return principal;
+	}
+
+	public String getRawAccessToken() {
+		return rawAccessToken;
 	}
 
 	// Bazı endpoint'lerde anonim erişim olabilir; bu yüzden context'in dolu olup olmadığı da kontrol edilebilir.

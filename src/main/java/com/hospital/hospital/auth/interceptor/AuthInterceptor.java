@@ -64,6 +64,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 		try {
 			TokenPrincipal principal = jwtTokenService.parseAccessToken(token);
 			currentUserContext.setPrincipal(principal);
+			currentUserContext.setRawAccessToken(token);
 			if (hasPermissionRequirement(handlerMethod)) {
 				authorizeIfRequired(handlerMethod);
 			}

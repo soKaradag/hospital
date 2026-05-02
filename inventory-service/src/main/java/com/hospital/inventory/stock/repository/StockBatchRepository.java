@@ -32,6 +32,24 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, UUID> {
 			@Param("batchNumber") String batchNumber,
 			@Param("expiresAt") LocalDate expiresAt);
 
+	@Query("""
+			select batch
+			from StockBatch batch
+			where batch.inventoryItem.id = :itemId
+			  and batch.warehouse.id = :warehouseId
+			  and ((:warehouseZoneId is null and batch.warehouseZone is null)
+			    or batch.warehouseZone.id = :warehouseZoneId)
+			  and batch.active = true
+			order by
+			  case when batch.expiresAt is null then 1 else 0 end,
+			  batch.expiresAt asc,
+			  batch.batchNumber asc
+			""")
+	List<StockBatch> findAllByItemAndLocationOrderByExpiry(
+			@Param("itemId") UUID itemId,
+			@Param("warehouseId") UUID warehouseId,
+			@Param("warehouseZoneId") UUID warehouseZoneId);
+
 	List<StockBatch> findAllByInventoryItemIdAndActiveTrueOrderByExpiresAtAscBatchNumberAsc(UUID inventoryItemId);
 
 	@Query("""
