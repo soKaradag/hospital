@@ -33,6 +33,10 @@ public class Surgery extends BaseEntity {
 	@JoinColumn(name = "operating_room_id", nullable = false)
 	private OperatingRoom operatingRoom;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "supply_template_id")
+	private SurgerySupplyTemplate supplyTemplate;
+
 	@Column(name = "scheduled_at", nullable = false)
 	private Instant scheduledAt;
 
@@ -75,6 +79,14 @@ public class Surgery extends BaseEntity {
 
 	public void setOperatingRoom(OperatingRoom operatingRoom) {
 		this.operatingRoom = operatingRoom;
+	}
+
+	public SurgerySupplyTemplate getSupplyTemplate() {
+		return supplyTemplate;
+	}
+
+	public void setSupplyTemplate(SurgerySupplyTemplate supplyTemplate) {
+		this.supplyTemplate = supplyTemplate;
 	}
 
 	public Instant getScheduledAt() {

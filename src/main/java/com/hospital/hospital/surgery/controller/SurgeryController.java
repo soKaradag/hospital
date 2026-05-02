@@ -15,10 +15,14 @@ import com.hospital.hospital.auth.model.PermissionCodes;
 import com.hospital.hospital.common.dto.ApiResponse;
 import com.hospital.hospital.surgery.dto.CreateOperatingRoomRequest;
 import com.hospital.hospital.surgery.dto.CreateSurgeryRequestRequest;
+import com.hospital.hospital.surgery.dto.CreateSurgerySupplyTemplateRequest;
+import com.hospital.hospital.surgery.dto.DoctorProcedurePrivilegeResponse;
+import com.hospital.hospital.surgery.dto.GrantDoctorProcedurePrivilegeRequest;
 import com.hospital.hospital.surgery.dto.OperatingRoomResponse;
 import com.hospital.hospital.surgery.dto.ScheduleSurgeryRequest;
 import com.hospital.hospital.surgery.dto.SurgeryRequestResponse;
 import com.hospital.hospital.surgery.dto.SurgeryResponse;
+import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateResponse;
 import com.hospital.hospital.surgery.service.SurgeryService;
 
 import jakarta.validation.Valid;
@@ -39,6 +43,24 @@ public class SurgeryController {
 	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
 	public ApiResponse<OperatingRoomResponse> createOperatingRoom(@Valid @RequestBody CreateOperatingRoomRequest request) {
 		return ApiResponse.success("Operating room created successfully", surgeryService.createOperatingRoom(request));
+	}
+
+	@PostMapping("/doctor-privileges")
+	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
+	public ApiResponse<DoctorProcedurePrivilegeResponse> grantDoctorProcedurePrivilege(
+			@Valid @RequestBody GrantDoctorProcedurePrivilegeRequest request) {
+		return ApiResponse.success(
+				"Doctor procedure privilege granted successfully",
+				surgeryService.grantDoctorProcedurePrivilege(request));
+	}
+
+	@PostMapping("/supply-templates")
+	@RequirePermission(PermissionCodes.SURGERIES_WRITE)
+	public ApiResponse<SurgerySupplyTemplateResponse> createSupplyTemplate(
+			@Valid @RequestBody CreateSurgerySupplyTemplateRequest request) {
+		return ApiResponse.success(
+				"Surgery supply template created successfully",
+				surgeryService.createSupplyTemplate(request));
 	}
 
 	@PostMapping("/requests")

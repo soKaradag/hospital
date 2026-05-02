@@ -10,6 +10,7 @@ public class SurgeryResponse {
 	private UUID patientId;
 	private UUID primaryDoctorId;
 	private UUID operatingRoomId;
+	private UUID supplyTemplateId;
 	private Instant scheduledAt;
 	private String status;
 	private String inventoryStatus;
@@ -57,6 +58,14 @@ public class SurgeryResponse {
 
 	public void setOperatingRoomId(UUID operatingRoomId) {
 		this.operatingRoomId = operatingRoomId;
+	}
+
+	public UUID getSupplyTemplateId() {
+		return supplyTemplateId;
+	}
+
+	public void setSupplyTemplateId(UUID supplyTemplateId) {
+		this.supplyTemplateId = supplyTemplateId;
 	}
 
 	public Instant getScheduledAt() {

@@ -18,19 +18,29 @@ import com.hospital.hospital.encounter.repository.EncounterRepository;
 import com.hospital.hospital.patient.model.Patient;
 import com.hospital.hospital.surgery.dto.CreateOperatingRoomRequest;
 import com.hospital.hospital.surgery.dto.CreateSurgeryRequestRequest;
+import com.hospital.hospital.surgery.dto.CreateSurgerySupplyTemplateRequest;
+import com.hospital.hospital.surgery.dto.DoctorProcedurePrivilegeResponse;
+import com.hospital.hospital.surgery.dto.GrantDoctorProcedurePrivilegeRequest;
 import com.hospital.hospital.surgery.dto.OperatingRoomResponse;
 import com.hospital.hospital.surgery.dto.ScheduleSurgeryRequest;
 import com.hospital.hospital.surgery.dto.SurgeryRequestResponse;
 import com.hospital.hospital.surgery.dto.SurgeryResponse;
+import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateItemRequest;
+import com.hospital.hospital.surgery.dto.SurgerySupplyTemplateResponse;
+import com.hospital.hospital.surgery.model.DoctorProcedurePrivilege;
 import com.hospital.hospital.surgery.model.OperatingRoom;
 import com.hospital.hospital.surgery.model.Surgery;
 import com.hospital.hospital.surgery.model.SurgeryRequest;
 import com.hospital.hospital.surgery.model.SurgeryStatusHistory;
+import com.hospital.hospital.surgery.model.SurgerySupplyTemplate;
+import com.hospital.hospital.surgery.model.SurgerySupplyTemplateItem;
 import com.hospital.hospital.surgery.model.SurgeryTeamAssignment;
+import com.hospital.hospital.surgery.repository.DoctorProcedurePrivilegeRepository;
 import com.hospital.hospital.surgery.repository.OperatingRoomRepository;
 import com.hospital.hospital.surgery.repository.SurgeryRepository;
 import com.hospital.hospital.surgery.repository.SurgeryRequestRepository;
 import com.hospital.hospital.surgery.repository.SurgeryStatusHistoryRepository;
+import com.hospital.hospital.surgery.repository.SurgerySupplyTemplateRepository;
 import com.hospital.hospital.surgery.repository.SurgeryTeamAssignmentRepository;
 
 @Service
@@ -40,6 +50,8 @@ public class SurgeryServiceImpl implements SurgeryService {
 	private final DoctorRepository doctorRepository;
 	private final EncounterRepository encounterRepository;
 	private final OperatingRoomRepository operatingRoomRepository;
+	private final DoctorProcedurePrivilegeRepository doctorProcedurePrivilegeRepository;
+	private final SurgerySupplyTemplateRepository surgerySupplyTemplateRepository;
 	private final SurgeryRequestRepository surgeryRequestRepository;
 	private final SurgeryRepository surgeryRepository;
 	private final SurgeryTeamAssignmentRepository surgeryTeamAssignmentRepository;
@@ -50,6 +62,8 @@ public class SurgeryServiceImpl implements SurgeryService {
 			DoctorRepository doctorRepository,
 			EncounterRepository encounterRepository,
 			OperatingRoomRepository operatingRoomRepository,
+			DoctorProcedurePrivilegeRepository doctorProcedurePrivilegeRepository,
+			SurgerySupplyTemplateRepository surgerySupplyTemplateRepository,
 			SurgeryRequestRepository surgeryRequestRepository,
 			SurgeryRepository surgeryRepository,
 			SurgeryTeamAssignmentRepository surgeryTeamAssignmentRepository,
@@ -58,6 +72,8 @@ public class SurgeryServiceImpl implements SurgeryService {
 		this.doctorRepository = doctorRepository;
 		this.encounterRepository = encounterRepository;
 		this.operatingRoomRepository = operatingRoomRepository;
+		this.doctorProcedurePrivilegeRepository = doctorProcedurePrivilegeRepository;
+		this.surgerySupplyTemplateRepository = surgerySupplyTemplateRepository;
 		this.surgeryRequestRepository = surgeryRequestRepository;
 		this.surgeryRepository = surgeryRepository;
 		this.surgeryTeamAssignmentRepository = surgeryTeamAssignmentRepository;
@@ -78,6 +94,47 @@ public class SurgeryServiceImpl implements SurgeryService {
 		operatingRoom.setName(request.getName().trim());
 		operatingRoom.setActive(request.isActive());
 		return toResponse(operatingRoomRepository.save(operatingRoom));
+	}
+
+	@Override
+	@Transactional
+	public DoctorProcedurePrivilegeResponse grantDoctorProcedurePrivilege(GrantDoctorProcedurePrivilegeRequest request) {
+		if (doctorProcedurePrivilegeRepository.existsByDoctorIdAndProcedureCodeIgnoreCase(
+				request.getDoctorId(),
+				request.getProcedureCode().trim())) {
+			throw new DuplicateResourceException("Doctor procedure privilege already exists for this doctor and procedure");
+		}
+		Doctor doctor = doctorRepository.findById(request.getDoctorId())
+				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + request.getDoctorId()));
+		DoctorProcedurePrivilege privilege = new DoctorProcedurePrivilege();
+		privilege.setDoctor(doctor);
+		privilege.setProcedureCode(request.getProcedureCode().trim());
+		privilege.setProcedureName(request.getProcedureName().trim());
+		privilege.setActive(request.isActive());
+		privilege.setGrantedAt(Instant.now());
+		return toResponse(doctorProcedurePrivilegeRepository.save(privilege));
+	}
+
+	@Override
+	@Transactional
+	public SurgerySupplyTemplateResponse createSupplyTemplate(CreateSurgerySupplyTemplateRequest request) {
+		if (surgerySupplyTemplateRepository.existsByCodeIgnoreCase(request.getCode().trim())) {
+			throw new DuplicateResourceException("Surgery supply template code already exists: " + request.getCode());
+		}
+		SurgerySupplyTemplate template = new SurgerySupplyTemplate();
+		template.setCode(request.getCode().trim());
+		template.setName(request.getName().trim());
+		template.setProcedureCode(request.getProcedureCode().trim());
+		template.setActive(request.isActive());
+		for (SurgerySupplyTemplateItemRequest itemRequest : request.getItems()) {
+			SurgerySupplyTemplateItem item = new SurgerySupplyTemplateItem();
+			item.setSurgerySupplyTemplate(template);
+			item.setInventoryItemCode(itemRequest.getInventoryItemCode().trim());
+			item.setQuantity(itemRequest.getQuantity());
+			item.setNote(trimToNull(itemRequest.getNote()));
+			template.getItems().add(item);
+		}
+		return toResponse(surgerySupplyTemplateRepository.save(template));
 	}
 
 	@Override
@@ -112,8 +169,23 @@ public class SurgeryServiceImpl implements SurgeryService {
 		}
 		Doctor primaryDoctor = doctorRepository.findById(request.getPrimaryDoctorId())
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + request.getPrimaryDoctorId()));
+		DoctorProcedurePrivilege privilege = doctorProcedurePrivilegeRepository
+				.findByDoctorIdAndProcedureCodeIgnoreCase(primaryDoctor.getId(), surgeryRequest.getProcedureCode())
+				.orElseThrow(() -> new BusinessRuleViolationException(
+						"Primary doctor does not have a privilege for the requested procedure"));
+		if (!privilege.isActive()) {
+			throw new BusinessRuleViolationException("Primary doctor privilege is not active for the requested procedure");
+		}
 		OperatingRoom operatingRoom = operatingRoomRepository.findById(request.getOperatingRoomId())
 				.orElseThrow(() -> new ResourceNotFoundException("Operating room not found: " + request.getOperatingRoomId()));
+		SurgerySupplyTemplate supplyTemplate = surgerySupplyTemplateRepository.findById(request.getSupplyTemplateId())
+				.orElseThrow(() -> new ResourceNotFoundException("Surgery supply template not found: " + request.getSupplyTemplateId()));
+		if (!supplyTemplate.isActive()) {
+			throw new BusinessRuleViolationException("Surgery supply template is not active");
+		}
+		if (!supplyTemplate.getProcedureCode().equalsIgnoreCase(surgeryRequest.getProcedureCode())) {
+			throw new BusinessRuleViolationException("Supply template procedure code must match the surgery request");
+		}
 		Patient patient = surgeryRequest.getEncounter().getPatient();
 
 		Surgery surgery = new Surgery();
@@ -121,6 +193,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 		surgery.setPatient(patient);
 		surgery.setPrimaryDoctor(primaryDoctor);
 		surgery.setOperatingRoom(operatingRoom);
+		surgery.setSupplyTemplate(supplyTemplate);
 		surgery.setScheduledAt(request.getScheduledAt());
 		surgery.setStatus("PLANNED");
 		surgery.setInventoryStatus("NOT_STARTED");
@@ -188,6 +261,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 		response.setPatientId(surgery.getPatient().getId());
 		response.setPrimaryDoctorId(surgery.getPrimaryDoctor().getId());
 		response.setOperatingRoomId(surgery.getOperatingRoom().getId());
+		response.setSupplyTemplateId(surgery.getSupplyTemplate() != null ? surgery.getSupplyTemplate().getId() : null);
 		response.setScheduledAt(surgery.getScheduledAt());
 		response.setStatus(surgery.getStatus());
 		response.setInventoryStatus(surgery.getInventoryStatus());
@@ -205,5 +279,40 @@ public class SurgeryServiceImpl implements SurgeryService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isBlank() ? null : trimmed;
+	}
+
+	private DoctorProcedurePrivilegeResponse toResponse(DoctorProcedurePrivilege privilege) {
+		DoctorProcedurePrivilegeResponse response = new DoctorProcedurePrivilegeResponse();
+		response.setId(privilege.getId());
+		response.setDoctorId(privilege.getDoctor().getId());
+		response.setProcedureCode(privilege.getProcedureCode());
+		response.setProcedureName(privilege.getProcedureName());
+		response.setActive(privilege.isActive());
+		response.setGrantedAt(privilege.getGrantedAt());
+		response.setCreatedAt(privilege.getCreatedAt());
+		response.setUpdatedAt(privilege.getUpdatedAt());
+		return response;
+	}
+
+	private SurgerySupplyTemplateResponse toResponse(SurgerySupplyTemplate template) {
+		SurgerySupplyTemplateResponse response = new SurgerySupplyTemplateResponse();
+		response.setId(template.getId());
+		response.setCode(template.getCode());
+		response.setName(template.getName());
+		response.setProcedureCode(template.getProcedureCode());
+		response.setActive(template.isActive());
+		response.setItems(template.getItems().stream().map(this::toResponse).toList());
+		response.setCreatedAt(template.getCreatedAt());
+		response.setUpdatedAt(template.getUpdatedAt());
+		return response;
+	}
+
+	private SurgerySupplyTemplateResponse.Item toResponse(SurgerySupplyTemplateItem item) {
+		SurgerySupplyTemplateResponse.Item response = new SurgerySupplyTemplateResponse.Item();
+		response.setId(item.getId());
+		response.setInventoryItemCode(item.getInventoryItemCode());
+		response.setQuantity(item.getQuantity());
+		response.setNote(item.getNote());
+		return response;
 	}
 }

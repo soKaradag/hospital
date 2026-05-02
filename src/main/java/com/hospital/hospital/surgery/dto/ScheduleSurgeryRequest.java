@@ -17,6 +17,9 @@ public class ScheduleSurgeryRequest {
 	@NotNull(message = "operatingRoomId must not be null")
 	private UUID operatingRoomId;
 
+	@NotNull(message = "supplyTemplateId must not be null")
+	private UUID supplyTemplateId;
+
 	@NotNull(message = "scheduledAt must not be null")
 	private Instant scheduledAt;
 
@@ -45,6 +48,14 @@ public class ScheduleSurgeryRequest {
 
 	public void setOperatingRoomId(UUID operatingRoomId) {
 		this.operatingRoomId = operatingRoomId;
+	}
+
+	public UUID getSupplyTemplateId() {
+		return supplyTemplateId;
+	}
+
+	public void setSupplyTemplateId(UUID supplyTemplateId) {
+		this.supplyTemplateId = supplyTemplateId;
 	}
 
 	public Instant getScheduledAt() {
