@@ -28,6 +28,18 @@ Amac, klinik ve operasyonel cekirdegi parcalamadan stok yonetimi, depo hareketle
 - Klinik veriyi bozmadan inventory alanini bagimsiz gelistirmek daha dusuk risklidir.
 - Ilerde finance de ayrilmak isterse benzer bir servis ayrisma modeli tekrar kullanilabilir.
 
+## Klinik ve Facility Ayrimi
+
+Faz 4 tasariminda her stok kalemi `hospital-core` ile konusmaz.
+
+- Klinik stok: ameliyat sarflari, procedure kitleri, recete dispense edilen ilaclar, laboratuvar tuketimleri
+- Facility stok: temizlik malzemeleri, ofis sarflari, teknik servis malzemeleri, genel isletme depo urunleri
+
+Kurallar:
+- `hospital-core`, sadece klinik olaylardan dogan ihtiyaclarda `inventory-service`e istek gonderir.
+- Facility stoklari yalnizca `inventory-service` icinde yonetilir.
+- Bu sayede gereksiz servisler arasi bag azalir ve klinik cekirdek sade kalir.
+
 ## Servis Siniri
 
 ### Hospital Core
@@ -51,6 +63,8 @@ Asagidaki alanlar `inventory-service` icinde olur:
 - rezervasyon ve transfer akisleri
 - satin alma ve mal kabul akislari
 - yeniden siparis kurallari
+
+Ilk derin entegrasyon adayi ameliyat ve klinik prosedur akislari olur.
 
 ## Inventory Service Tablo Tasarimi
 
@@ -150,6 +164,9 @@ Asagidaki alanlar `inventory-service` icinde olur:
 `hospital-core` su ihtiyaclari `inventory-service`e bildirir:
 - recete dispense edildiginde stok dusum talebi
 - encounter procedure veya klinik kullanim olustugunda sarf tuketim talebi
+- ameliyat planlandiginda pre-op rezervasyon talebi
+- ameliyat tamamlandiginda gercek tuketim dusum talebi
+- ameliyat iptal veya ertelendiyse rezervasyon birakma talebi
 - ileri tarihli klinik uygulama varsa rezervasyon talebi
 
 ### Inventory Service Cevabi
@@ -159,6 +176,7 @@ Asagidaki alanlar `inventory-service` icinde olur:
 - stok yeterli / yetersiz
 - batch secimi yapildi
 - stok hareketi basariyla yazildi
+- ameliyat icin gereken set veya sarf hazirlandi
 - transfer veya mal kabul tamamlandi
 
 ### Veri Sahipligi
@@ -167,6 +185,87 @@ Asagidaki alanlar `inventory-service` icinde olur:
 - `inventory-service` fiziksel stok gerceginin sahibidir
 - ayni hareket iki sistemde farkli amaclarla tutulabilir
 - tek veri kaynagi ilkesi korunur; stok miktarinin dogrusu yalnizca `inventory-service`tedir
+
+## Ameliyat Alani Icin Onerilen Core Genislemesi
+
+Ameliyat akislarini inventory ile saglikli entegre etmek icin, cerrahi alan `hospital-core` icinde ayri bir klinik modul olarak ele alinabilir.
+
+Bu genisleme Faz 4'un ayni anda zorunlu parcasi degildir; ancak inventory entegrasyonunun en guclu klinik kullanimi oldugu icin tasarim seviyesinde simdiden dusunulmelidir.
+
+### Onerilen Cerrahi Tablolari
+
+1. `operating_rooms`
+2. `surgery_requests`
+3. `surgeries`
+4. `surgery_team_assignments`
+5. `surgery_status_history`
+6. `surgery_supply_templates`
+7. `surgery_supply_template_items`
+8. `doctor_procedure_privileges`
+
+### Bu Tablolarin Amaci
+
+- `operating_rooms`: ameliyathane odalari ve temel kapasite takibi
+- `surgery_requests`: ameliyat ihtiyacinin ilk klinik kaydi
+- `surgeries`: planlanmis veya gerceklesmis operasyon kaydi
+- `surgery_team_assignments`: vaka bazli ekip atamasi
+- `surgery_status_history`: planlandi, hazirlaniyor, basladi, tamamlandi, iptal edildi gibi durum gecisi
+- `surgery_supply_templates`: ameliyat tipine gore beklenen standart sarf seti
+- `surgery_supply_template_items`: set satirlari ve beklenen miktarlar
+- `doctor_procedure_privileges`: doktorun hangi ameliyat veya prosedur tiplerinde operator / yardimci olabilecegi
+
+### Operator Doktor Kurali
+
+`operator doktor` auth rolu olarak modellenmemelidir.
+
+Dogru yaklasim:
+- rol bazli yetki: sisteme erisim ve ekran/API yetkileri
+- klinik yetkinlik: doktorun ameliyat veya prosedur yapabilme kabiliyeti
+
+Bu nedenle:
+- `ROLE_SURGEON` benzeri auth rolunden kacinilir
+- doktorun klinik uygunlugu `specialties` + `doctor_procedure_privileges` ile belirlenir
+- vaka icindeki gorev ise `surgery_team_assignments` uzerinden atanir
+
+Olası ekip rolleri:
+- `lead_surgeon`
+- `assistant_surgeon`
+- `anesthesiologist`
+- `scrub_nurse`
+- `circulating_nurse`
+
+## Ameliyat ve Inventory Entegrasyon Akisi
+
+### Pre-Op
+
+1. `surgery_request` acilir
+2. `surgery` planlanir
+3. ilgili ameliyat tipi icin `surgery_supply_template` secilir
+4. `hospital-core`, `inventory-service`e rezervasyon talebi gonderir
+5. `inventory-service` gerekli batch ve miktarlari ayirir
+
+### Intra-Op / Completion
+
+1. ameliyat tamamlaninca gercek tuketim kaydi olusur
+2. kullanilan urunler `stock_movements` olarak dusulur
+3. kullanilmayan rezervasyonlar serbest birakilir
+
+### Cancellation / Postponement
+
+1. ameliyat iptal veya ertelenirse rezervasyon cozulur
+2. gerekiyorsa yeni tarih icin yeniden rezervasyon acilir
+
+## Ameliyat Icin Onerilen API Genislemeleri
+
+- `POST /api/inventory/reservations/surgeries`
+- `POST /api/inventory/consumptions/surgeries`
+- `POST /api/inventory/reservations/{reservationId}/release`
+- `GET /api/inventory/surgeries/{surgeryId}/reservation-status`
+
+Not:
+- bu endpoint'ler inventory servisinde olur
+- `hospital-core` ameliyat kaydinin sahibidir
+- `inventory-service` fiziksel hazirlik ve stok dusumunun sahibidir
 
 ## API Sinirlari
 
@@ -233,6 +332,13 @@ Bu servis kendi auth katmanini sifirdan uretmek yerine iki yaklasimdan biriyle c
 3. `hospital-core` ile consumption ve reservation entegrasyonu
 4. stok yeterlilik ve hareket raporlari
 
+### Bolum 4 - Cerrahi Entegrasyon Hazirligi
+
+1. klinik stok ile facility stok ayrimini kod ve API seviyesinde sabitle
+2. ameliyat akisi icin gerekli core tablolarini planla
+3. `surgery_supply_templates` ile inventory rezervasyon kontratini tanimla
+4. ameliyat iptal, erteleme ve completion senaryolarini netlestir
+
 ## Non-Goals
 
 Faz 4'te su konular hedeflenmez:
@@ -240,6 +346,7 @@ Faz 4'te su konular hedeflenmez:
 - dagitik transaction veya saga orkestrasyonu kurmak
 - inventory ile finance'i ayni anda ayirmak
 - cihaz bakim yonetimi gibi farkli operasyon alanlarini inventory kapsaminda zorla eritmek
+- operator doktor kavramini auth role cevirmek
 
 ## Beklenen Sonuc
 
