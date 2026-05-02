@@ -41,4 +41,18 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, UUID> {
 			  and batch.active = true
 			""")
 	BigDecimal sumQuantityOnHandByItemId(@Param("itemId") UUID itemId);
+
+	@Query("""
+			select coalesce(sum(batch.quantityOnHand), 0)
+			from StockBatch batch
+			where batch.inventoryItem.id = :itemId
+			  and batch.warehouse.id = :warehouseId
+			  and ((:warehouseZoneId is null and batch.warehouseZone is null)
+			    or batch.warehouseZone.id = :warehouseZoneId)
+			  and batch.active = true
+			""")
+	BigDecimal sumQuantityOnHandByLocation(
+			@Param("itemId") UUID itemId,
+			@Param("warehouseId") UUID warehouseId,
+			@Param("warehouseZoneId") UUID warehouseZoneId);
 }

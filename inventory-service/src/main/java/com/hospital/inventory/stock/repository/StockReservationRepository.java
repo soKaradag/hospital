@@ -29,5 +29,20 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
 			""")
 	BigDecimal sumQuantityByBatchIdAndStatus(@Param("batchId") UUID batchId, @Param("status") ReservationStatus status);
 
+	@Query("""
+			select coalesce(sum(reservation.quantity), 0)
+			from StockReservation reservation
+			where reservation.inventoryItem.id = :itemId
+			  and reservation.warehouse.id = :warehouseId
+			  and ((:warehouseZoneId is null and reservation.warehouseZone is null)
+			    or reservation.warehouseZone.id = :warehouseZoneId)
+			  and reservation.status = :status
+			""")
+	BigDecimal sumQuantityByItemAndLocationAndStatus(
+			@Param("itemId") UUID itemId,
+			@Param("warehouseId") UUID warehouseId,
+			@Param("warehouseZoneId") UUID warehouseZoneId,
+			@Param("status") ReservationStatus status);
+
 	Optional<StockReservation> findByIdAndStatus(UUID id, ReservationStatus status);
 }
