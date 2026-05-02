@@ -42,6 +42,8 @@ public final class PermissionCodes {
 	public static final String INVENTORY_PURCHASE_WRITE = "inventory.purchase.write";
 	public static final String INVENTORY_RECEIPTS_WRITE = "inventory.receipts.write";
 	public static final String INVENTORY_COUNTS_MANAGE = "inventory.counts.manage";
+	public static final String SURGERIES_READ = "surgeries.read";
+	public static final String SURGERIES_WRITE = "surgeries.write";
 
 	private PermissionCodes() {
 	}
