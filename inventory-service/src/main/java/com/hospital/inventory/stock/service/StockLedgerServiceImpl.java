@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.inventory.common.exception.ResourceNotFoundException;
 import com.hospital.inventory.inventoryitem.repository.InventoryItemRepository;
+import com.hospital.inventory.stock.model.ReservationStatus;
 import com.hospital.inventory.stock.dto.StockAvailabilityBatchResponse;
 import com.hospital.inventory.stock.dto.StockAvailabilityResponse;
 import com.hospital.inventory.stock.dto.StockMovementResponse;
@@ -17,6 +18,7 @@ import com.hospital.inventory.stock.model.StockBatch;
 import com.hospital.inventory.stock.model.StockMovement;
 import com.hospital.inventory.stock.repository.StockBatchRepository;
 import com.hospital.inventory.stock.repository.StockMovementRepository;
+import com.hospital.inventory.stock.repository.StockReservationRepository;
 
 @Service
 public class StockLedgerServiceImpl implements StockLedgerService {
@@ -24,14 +26,17 @@ public class StockLedgerServiceImpl implements StockLedgerService {
 	private final InventoryItemRepository inventoryItemRepository;
 	private final StockBatchRepository stockBatchRepository;
 	private final StockMovementRepository stockMovementRepository;
+	private final StockReservationRepository stockReservationRepository;
 
 	public StockLedgerServiceImpl(
 			InventoryItemRepository inventoryItemRepository,
 			StockBatchRepository stockBatchRepository,
-			StockMovementRepository stockMovementRepository) {
+			StockMovementRepository stockMovementRepository,
+			StockReservationRepository stockReservationRepository) {
 		this.inventoryItemRepository = inventoryItemRepository;
 		this.stockBatchRepository = stockBatchRepository;
 		this.stockMovementRepository = stockMovementRepository;
+		this.stockReservationRepository = stockReservationRepository;
 	}
 
 	@Override
@@ -40,11 +45,14 @@ public class StockLedgerServiceImpl implements StockLedgerService {
 		ensureItemExists(itemId);
 
 		BigDecimal totalOnHand = stockBatchRepository.sumQuantityOnHandByItemId(itemId);
+		BigDecimal reservedQuantity = stockReservationRepository.sumQuantityByItemIdAndStatus(
+				itemId,
+				ReservationStatus.ACTIVE);
 		StockAvailabilityResponse response = new StockAvailabilityResponse();
 		response.setItemId(itemId);
 		response.setTotalOnHand(totalOnHand);
-		response.setReservedQuantity(BigDecimal.ZERO);
-		response.setAvailableQuantity(totalOnHand);
+		response.setReservedQuantity(reservedQuantity);
+		response.setAvailableQuantity(totalOnHand.subtract(reservedQuantity));
 		response.setBatches(stockBatchRepository.findAllByInventoryItemIdAndActiveTrueOrderByExpiresAtAscBatchNumberAsc(itemId)
 				.stream()
 				.map(this::toBatchResponse)
