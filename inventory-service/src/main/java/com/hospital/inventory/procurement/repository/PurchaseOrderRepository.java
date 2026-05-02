@@ -17,6 +17,6 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, UU
 	@EntityGraph(attributePaths = { "supplier", "items", "items.inventoryItem", "items.supplierCatalogItem" })
 	Optional<PurchaseOrder> findById(UUID id);
 
-	@EntityGraph(attributePaths = { "supplier", "items" })
+	@EntityGraph(attributePaths = { "supplier", "items", "items.inventoryItem", "items.supplierCatalogItem" })
 	Page<PurchaseOrder> findAll(Pageable pageable);
 }

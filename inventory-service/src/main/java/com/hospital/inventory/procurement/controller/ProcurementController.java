@@ -17,8 +17,10 @@ import com.hospital.inventory.auth.annotation.RequirePermission;
 import com.hospital.inventory.auth.model.PermissionCodes;
 import com.hospital.inventory.common.dto.ApiResponse;
 import com.hospital.inventory.common.dto.PageResponse;
+import com.hospital.inventory.procurement.dto.CreateGoodsReceiptRequest;
 import com.hospital.inventory.procurement.dto.CreatePurchaseOrderRequest;
 import com.hospital.inventory.procurement.dto.CreateSupplierCatalogItemRequest;
+import com.hospital.inventory.procurement.dto.GoodsReceiptResponse;
 import com.hospital.inventory.procurement.dto.PurchaseOrderResponse;
 import com.hospital.inventory.procurement.dto.SupplierCatalogItemResponse;
 import com.hospital.inventory.procurement.service.ProcurementService;
@@ -63,6 +65,22 @@ public class ProcurementController {
 				procurementService.createPurchaseOrder(request));
 	}
 
+	@PostMapping("/purchase-orders/{id}/approve")
+	@RequirePermission(PermissionCodes.INVENTORY_PURCHASE_WRITE)
+	public ApiResponse<PurchaseOrderResponse> approvePurchaseOrder(@PathVariable UUID id) {
+		return ApiResponse.success(
+				"Purchase order approved successfully",
+				procurementService.approvePurchaseOrder(id));
+	}
+
+	@PostMapping("/purchase-orders/{id}/cancel")
+	@RequirePermission(PermissionCodes.INVENTORY_PURCHASE_WRITE)
+	public ApiResponse<PurchaseOrderResponse> cancelPurchaseOrder(@PathVariable UUID id) {
+		return ApiResponse.success(
+				"Purchase order cancelled successfully",
+				procurementService.cancelPurchaseOrder(id));
+	}
+
 	@GetMapping("/purchase-orders/{id}")
 	@RequirePermission(PermissionCodes.INVENTORY_PURCHASE_READ)
 	public ApiResponse<PurchaseOrderResponse> getPurchaseOrderById(@PathVariable UUID id) {
@@ -78,5 +96,13 @@ public class ProcurementController {
 		return ApiResponse.success(
 				"Purchase orders retrieved successfully",
 				PageResponse.from(procurementService.getPurchaseOrders(pageable)));
+	}
+
+	@PostMapping("/receipts")
+	@RequirePermission(PermissionCodes.INVENTORY_RECEIPTS_WRITE)
+	public ApiResponse<GoodsReceiptResponse> createGoodsReceipt(@Valid @RequestBody CreateGoodsReceiptRequest request) {
+		return ApiResponse.success(
+				"Goods receipt created successfully",
+				procurementService.createGoodsReceipt(request));
 	}
 }
