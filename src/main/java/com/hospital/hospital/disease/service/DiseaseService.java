@@ -30,4 +30,6 @@ public interface DiseaseService {
 
 	// Kod veya isim alanına göre arama yapar.
 	Page<DiseaseResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }

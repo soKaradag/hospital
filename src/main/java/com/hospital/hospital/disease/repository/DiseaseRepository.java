@@ -15,7 +15,16 @@ public interface DiseaseRepository extends JpaRepository<Disease, UUID> {
 
 	boolean existsByCode(String code);
 
+	Optional<Disease> findByIdAndActiveTrue(UUID id);
+
+	Page<Disease> findAllByActiveTrue(Pageable pageable);
+
 	Page<Disease> findAllByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(
+			String codeKeyword,
+			String nameKeyword,
+			Pageable pageable);
+
+	Page<Disease> findAllByActiveTrueAndCodeContainingIgnoreCaseOrActiveTrueAndNameContainingIgnoreCase(
 			String codeKeyword,
 			String nameKeyword,
 			Pageable pageable);

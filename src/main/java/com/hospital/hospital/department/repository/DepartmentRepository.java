@@ -21,9 +21,15 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 	// Query: SELECT * FROM departments WHERE name = ?
 	Optional<Department> findByName(String name);
 
+	Optional<Department> findByIdAndActiveTrue(UUID id);
+
+	Page<Department> findAllByActiveTrue(Pageable pageable);
+
 	// Bölüm adı içinde geçen metne göre arama yapar ve sonuçları sayfalayarak getirir.
 	// IgnoreCase, büyük-küçük harf duyarlılığını kaldırır.
 	// Containing, LIKE %kelime% benzeri arama üretir.
 	// Query: SELECT * FROM departments WHERE LOWER(name) LIKE LOWER('%?%')
 	Page<Department> findAllByNameContainingIgnoreCase(String keyword, Pageable pageable);
+
+	Page<Department> findAllByActiveTrueAndNameContainingIgnoreCase(String keyword, Pageable pageable);
 }

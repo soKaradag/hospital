@@ -34,4 +34,6 @@ public interface DoctorScheduleService {
 
 	// Haftanın belirli bir gününe ait çalışma planlarını sayfalı şekilde getirir.
 	Page<DoctorScheduleResponse> getAllByDay(DayOfWeek dayOfWeek, Pageable pageable);
+
+	void delete(UUID id);
 }

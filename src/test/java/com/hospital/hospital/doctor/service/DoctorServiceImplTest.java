@@ -26,7 +26,9 @@ import com.hospital.hospital.doctor.dto.CreateDoctorRequest;
 import com.hospital.hospital.doctor.dto.DoctorResponse;
 import com.hospital.hospital.doctor.mapper.DoctorMapper;
 import com.hospital.hospital.doctor.model.Doctor;
+import com.hospital.hospital.doctor.repository.DoctorSpecialtyRepository;
 import com.hospital.hospital.doctor.repository.DoctorRepository;
+import com.hospital.hospital.doctor.repository.SpecialtyRepository;
 
 @ExtendWith(MockitoExtension.class)
 class DoctorServiceImplTest {
@@ -39,6 +41,12 @@ class DoctorServiceImplTest {
 
 	@Mock
 	private DoctorMapper doctorMapper;
+
+	@Mock
+	private SpecialtyRepository specialtyRepository;
+
+	@Mock
+	private DoctorSpecialtyRepository doctorSpecialtyRepository;
 
 	@InjectMocks
 	private DoctorServiceImpl doctorService;
@@ -62,7 +70,7 @@ class DoctorServiceImplTest {
 		response.setDepartmentId(departmentId);
 
 		when(doctorMapper.toEntity(request)).thenReturn(mappedDoctor);
-		when(departmentRepository.findById(departmentId)).thenReturn(Optional.of(department));
+		when(departmentRepository.findByIdAndActiveTrue(departmentId)).thenReturn(Optional.of(department));
 		when(doctorRepository.save(mappedDoctor)).thenReturn(savedDoctor);
 		when(doctorMapper.toResponse(savedDoctor)).thenReturn(response);
 
@@ -80,7 +88,7 @@ class DoctorServiceImplTest {
 		request.setDepartmentId(departmentId);
 
 		when(doctorMapper.toEntity(request)).thenReturn(new Doctor());
-		when(departmentRepository.findById(departmentId)).thenReturn(Optional.empty());
+		when(departmentRepository.findByIdAndActiveTrue(departmentId)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class, () -> doctorService.create(request));
 	}
@@ -95,8 +103,8 @@ class DoctorServiceImplTest {
 		Doctor doctor = new Doctor();
 		Page<Doctor> page = new PageImpl<>(List.of(doctor), pageable, 1);
 
-		when(departmentRepository.findById(departmentId)).thenReturn(Optional.of(department));
-		when(doctorRepository.findAllByDepartmentId(departmentId, pageable)).thenReturn(page);
+		when(departmentRepository.findByIdAndActiveTrue(departmentId)).thenReturn(Optional.of(department));
+		when(doctorRepository.findAllByDepartmentIdAndActiveTrue(departmentId, pageable)).thenReturn(page);
 		when(doctorMapper.toResponse(doctor)).thenReturn(new DoctorResponse());
 
 		Page<DoctorResponse> result = doctorService.getAllByDepartment(departmentId, pageable);
@@ -112,7 +120,7 @@ class DoctorServiceImplTest {
 		Page<Doctor> page = new PageImpl<>(List.of(doctor), pageable, 1);
 
 		when(doctorRepository
-				.findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrSpecializationContainingIgnoreCase(
+				.findAllByActiveTrueAndFirstNameContainingIgnoreCaseOrActiveTrueAndLastNameContainingIgnoreCaseOrActiveTrueAndSpecializationContainingIgnoreCase(
 						keyword, keyword, keyword, pageable))
 				.thenReturn(page);
 		when(doctorMapper.toResponse(doctor)).thenReturn(new DoctorResponse());
@@ -120,5 +128,19 @@ class DoctorServiceImplTest {
 		Page<DoctorResponse> result = doctorService.search(keyword, pageable);
 
 		assertEquals(1, result.getTotalElements());
+	}
+
+	@Test
+	void deleteShouldDeactivateDoctor() {
+		UUID id = UUID.randomUUID();
+		Doctor doctor = new Doctor();
+		doctor.setId(id);
+		doctor.setActive(true);
+
+		when(doctorRepository.findByIdAndActiveTrue(id)).thenReturn(Optional.of(doctor));
+
+		doctorService.delete(id);
+
+		verify(doctorRepository).save(doctor);
 	}
 }

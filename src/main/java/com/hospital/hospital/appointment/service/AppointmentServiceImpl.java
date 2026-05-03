@@ -214,7 +214,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 	}
 
 	private Doctor getDoctor(UUID id) {
-		return doctorRepository.findById(id)
+		return doctorRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
 	}
 

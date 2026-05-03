@@ -20,4 +20,6 @@ public interface DepartmentService {
 	Page<DepartmentResponse> getAll(Pageable pageable);
 
 	Page<DepartmentResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }

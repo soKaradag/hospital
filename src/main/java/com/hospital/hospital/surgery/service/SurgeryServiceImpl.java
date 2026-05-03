@@ -93,7 +93,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 		if (operatingRoomRepository.existsByCodeIgnoreCase(request.getCode().trim())) {
 			throw new DuplicateResourceException("Operating room code already exists: " + request.getCode());
 		}
-		Department department = departmentRepository.findById(request.getDepartmentId())
+		Department department = departmentRepository.findByIdAndActiveTrue(request.getDepartmentId())
 				.orElseThrow(() -> new ResourceNotFoundException("Department not found: " + request.getDepartmentId()));
 		OperatingRoom operatingRoom = new OperatingRoom();
 		operatingRoom.setDepartment(department);
@@ -111,7 +111,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 				request.getProcedureCode().trim())) {
 			throw new DuplicateResourceException("Doctor procedure privilege already exists for this doctor and procedure");
 		}
-		Doctor doctor = doctorRepository.findById(request.getDoctorId())
+		Doctor doctor = doctorRepository.findByIdAndActiveTrue(request.getDoctorId())
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + request.getDoctorId()));
 		DoctorProcedurePrivilege privilege = new DoctorProcedurePrivilege();
 		privilege.setDoctor(doctor);
@@ -149,7 +149,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 	public SurgeryRequestResponse createSurgeryRequest(CreateSurgeryRequestRequest request) {
 		Encounter encounter = encounterRepository.findById(request.getEncounterId())
 				.orElseThrow(() -> new ResourceNotFoundException("Encounter not found: " + request.getEncounterId()));
-		Doctor requestedByDoctor = doctorRepository.findById(request.getRequestedByDoctorId())
+		Doctor requestedByDoctor = doctorRepository.findByIdAndActiveTrue(request.getRequestedByDoctorId())
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + request.getRequestedByDoctorId()));
 		if (!encounter.getDoctor().getId().equals(requestedByDoctor.getId())) {
 			throw new BusinessRuleViolationException("Surgery request doctor must match encounter doctor");
@@ -174,7 +174,7 @@ public class SurgeryServiceImpl implements SurgeryService {
 		if (surgeryRepository.existsBySurgeryRequestId(surgeryRequest.getId())) {
 			throw new DuplicateResourceException("A surgery has already been scheduled for this request");
 		}
-		Doctor primaryDoctor = doctorRepository.findById(request.getPrimaryDoctorId())
+		Doctor primaryDoctor = doctorRepository.findByIdAndActiveTrue(request.getPrimaryDoctorId())
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + request.getPrimaryDoctorId()));
 		DoctorProcedurePrivilege privilege = doctorProcedurePrivilegeRepository
 				.findByDoctorIdAndProcedureCodeIgnoreCase(primaryDoctor.getId(), surgeryRequest.getProcedureCode())

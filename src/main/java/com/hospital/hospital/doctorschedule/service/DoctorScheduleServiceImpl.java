@@ -84,7 +84,7 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 	@Transactional(readOnly = true)
 	// Tüm schedule kayıtları sayfalı şekilde listelenir.
 	public Page<DoctorScheduleResponse> getAll(Pageable pageable) {
-		return doctorScheduleRepository.findAll(pageable).map(this::toResponse);
+		return doctorScheduleRepository.findAllByActiveTrue(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -92,25 +92,33 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
 	// Doktora göre filtrelemede önce doktorun varlığı doğrulanır; böylece sessizce boş liste dönmek yerine hatalı id erken yakalanır.
 	public Page<DoctorScheduleResponse> getAllByDoctor(UUID doctorId, Pageable pageable) {
 		getDoctor(doctorId);
-		return doctorScheduleRepository.findAllByDoctorId(doctorId, pageable).map(this::toResponse);
+		return doctorScheduleRepository.findAllByDoctorIdAndActiveTrue(doctorId, pageable).map(this::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	// Haftanın gününe göre filtreleme randevu planlama tarafında temel bir sorgu zemini sağlar.
 	public Page<DoctorScheduleResponse> getAllByDay(DayOfWeek dayOfWeek, Pageable pageable) {
-		return doctorScheduleRepository.findAllByDayOfWeek(dayOfWeek, pageable).map(this::toResponse);
+		return doctorScheduleRepository.findAllByDayOfWeekAndActiveTrue(dayOfWeek, pageable).map(this::toResponse);
+	}
+
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		DoctorSchedule schedule = getSchedule(id);
+		schedule.setActive(false);
+		doctorScheduleRepository.save(schedule);
 	}
 
 	// Kayıt bulunamadığında ortak not found hatası üretmek için tek noktadan schedule getirir.
 	private DoctorSchedule getSchedule(UUID id) {
-		return doctorScheduleRepository.findById(id)
+		return doctorScheduleRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor schedule not found: " + id));
 	}
 
 	// Schedule kaydı oluşturma veya filtreleme öncesi doktor ilişkisinin gerçekten var olduğunu doğrular.
 	private Doctor getDoctor(UUID id) {
-		return doctorRepository.findById(id)
+		return doctorRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
 	}
 

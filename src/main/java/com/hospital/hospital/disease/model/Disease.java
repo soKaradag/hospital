@@ -35,6 +35,9 @@ public class Disease extends BaseEntity {
 	@Column(name = "description", length = 500)
 	private String description;
 
+	@Column(name = "active", nullable = false)
+	private boolean active = true;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "category_id", nullable = false)
 	private DiseaseCategory category;
@@ -61,6 +64,14 @@ public class Disease extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 
 	public DiseaseCategory getCategory() {

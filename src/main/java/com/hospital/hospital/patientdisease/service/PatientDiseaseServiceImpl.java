@@ -130,7 +130,7 @@ public class PatientDiseaseServiceImpl implements PatientDiseaseService {
 
 	// Disease ilişkisinin gerçekten var olup olmadığını doğrular.
 	private Disease getDisease(UUID id) {
-		return diseaseRepository.findById(id)
+		return diseaseRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Disease not found: " + id));
 	}
 

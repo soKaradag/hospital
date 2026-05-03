@@ -38,6 +38,9 @@ public class Doctor extends BaseEntity {
 	@Column(name = "specialization", length = 100)
 	private String specialization;
 
+	@Column(name = "active", nullable = false)
+	private boolean active = true;
+
 	@Embedded
 	private Contact contact;
 
@@ -71,6 +74,14 @@ public class Doctor extends BaseEntity {
 
 	public void setSpecialization(String specialization) {
 		this.specialization = specialization;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 
 	public Contact getContact() {

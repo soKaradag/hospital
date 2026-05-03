@@ -85,7 +85,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<DepartmentResponse> getAll(Pageable pageable) {
-		return departmentRepository.findAll(pageable).map(this::toResponse);
+		return departmentRepository.findAllByActiveTrue(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -94,12 +94,20 @@ public class DepartmentServiceImpl implements DepartmentService {
 		if (keyword == null || keyword.isBlank()) {
 			return getAll(pageable);
 		}
-		return departmentRepository.findAllByNameContainingIgnoreCase(keyword.trim(), pageable)
+		return departmentRepository.findAllByActiveTrueAndNameContainingIgnoreCase(keyword.trim(), pageable)
 				.map(this::toResponse);
 	}
 
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		Department department = getDepartment(id);
+		department.setActive(false);
+		departmentRepository.save(department);
+	}
+
 	private Department getDepartment(UUID id) {
-		return departmentRepository.findById(id)
+		return departmentRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Department not found: " + id));
 	}
 

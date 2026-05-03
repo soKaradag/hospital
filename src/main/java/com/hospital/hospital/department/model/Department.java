@@ -29,6 +29,9 @@ public class Department extends BaseEntity {
 	@Column(name = "description", length = 255)
 	private String description;
 
+	@Column(name = "active", nullable = false)
+	private boolean active = true;
+
 	public String getName() {
 		return name;
 	}
@@ -43,5 +46,13 @@ public class Department extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 }

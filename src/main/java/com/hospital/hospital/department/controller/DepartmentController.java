@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -84,5 +85,12 @@ public class DepartmentController {
 		}
 		return ApiResponse.success("Departments retrieved successfully",
 				PageResponse.from(departmentService.getAll(pageable)));
+	}
+
+	@DeleteMapping("/{id}")
+	@RequirePermission(PermissionCodes.DEPARTMENTS_WRITE)
+	public ApiResponse<Void> delete(@PathVariable UUID id) {
+		departmentService.delete(id);
+		return ApiResponse.success("Department deleted successfully", null);
 	}
 }

@@ -154,7 +154,7 @@ public class EncounterServiceImpl implements EncounterService {
 	}
 
 	private Doctor getDoctor(UUID id) {
-		return doctorRepository.findById(id)
+		return doctorRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
 	}
 

@@ -70,14 +70,14 @@ public class DoctorServiceImpl implements DoctorService {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<DoctorResponse> getAll(Pageable pageable) {
-		return doctorRepository.findAll(pageable).map(doctorMapper::toResponse);
+		return doctorRepository.findAllByActiveTrue(pageable).map(doctorMapper::toResponse);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public Page<DoctorResponse> getAllByDepartment(UUID departmentId, Pageable pageable) {
 		getDepartment(departmentId);
-		return doctorRepository.findAllByDepartmentId(departmentId, pageable).map(doctorMapper::toResponse);
+		return doctorRepository.findAllByDepartmentIdAndActiveTrue(departmentId, pageable).map(doctorMapper::toResponse);
 	}
 
 	@Override
@@ -88,18 +88,26 @@ public class DoctorServiceImpl implements DoctorService {
 		}
 		String value = keyword.trim();
 		return doctorRepository
-				.findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrSpecializationContainingIgnoreCase(
+				.findAllByActiveTrueAndFirstNameContainingIgnoreCaseOrActiveTrueAndLastNameContainingIgnoreCaseOrActiveTrueAndSpecializationContainingIgnoreCase(
 						value, value, value, pageable)
 				.map(doctorMapper::toResponse);
 	}
 
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		Doctor doctor = getDoctor(id);
+		doctor.setActive(false);
+		doctorRepository.save(doctor);
+	}
+
 	private Doctor getDoctor(UUID id) {
-		return doctorRepository.findById(id)
+		return doctorRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
 	}
 
 	private Department getDepartment(UUID id) {
-		return departmentRepository.findById(id)
+		return departmentRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Department not found: " + id));
 	}
 

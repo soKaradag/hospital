@@ -28,6 +28,8 @@ import com.hospital.hospital.department.dto.UpdateDepartmentRequest;
 import com.hospital.hospital.department.mapper.DepartmentMapper;
 import com.hospital.hospital.department.model.Department;
 import com.hospital.hospital.department.repository.DepartmentRepository;
+import com.hospital.hospital.department.repository.DepartmentServiceCatalogRepository;
+import com.hospital.hospital.department.repository.RoomRepository;
 
 @ExtendWith(MockitoExtension.class)
 class DepartmentServiceImplTest {
@@ -37,6 +39,12 @@ class DepartmentServiceImplTest {
 
 	@Mock
 	private DepartmentMapper departmentMapper;
+
+	@Mock
+	private RoomRepository roomRepository;
+
+	@Mock
+	private DepartmentServiceCatalogRepository departmentServiceCatalogRepository;
 
 	@InjectMocks
 	private DepartmentServiceImpl departmentService;
@@ -61,7 +69,9 @@ class DepartmentServiceImplTest {
 		when(departmentRepository.existsByName("Cardiology")).thenReturn(false);
 		when(departmentMapper.toEntity(request)).thenReturn(mappedDepartment);
 		when(departmentRepository.save(mappedDepartment)).thenReturn(savedDepartment);
-		when(departmentMapper.toResponse(savedDepartment)).thenReturn(response);
+		when(roomRepository.countByDepartmentId(savedDepartment.getId())).thenReturn(0L);
+		when(departmentServiceCatalogRepository.countByDepartmentId(savedDepartment.getId())).thenReturn(0L);
+		when(departmentMapper.toResponse(savedDepartment, 0L, 0L)).thenReturn(response);
 
 		DepartmentResponse actual = departmentService.create(request);
 
@@ -96,10 +106,12 @@ class DepartmentServiceImplTest {
 		response.setId(id);
 		response.setDescription("Updated");
 
-		when(departmentRepository.findById(id)).thenReturn(Optional.of(existing));
+		when(departmentRepository.findByIdAndActiveTrue(id)).thenReturn(Optional.of(existing));
 		when(departmentRepository.findByName("Cardiology")).thenReturn(Optional.of(existing));
 		when(departmentRepository.save(existing)).thenReturn(existing);
-		when(departmentMapper.toResponse(existing)).thenReturn(response);
+		when(roomRepository.countByDepartmentId(id)).thenReturn(0L);
+		when(departmentServiceCatalogRepository.countByDepartmentId(id)).thenReturn(0L);
+		when(departmentMapper.toResponse(existing, 0L, 0L)).thenReturn(response);
 
 		DepartmentResponse actual = departmentService.update(id, request);
 
@@ -114,12 +126,28 @@ class DepartmentServiceImplTest {
 		Department department = new Department();
 		Page<Department> page = new PageImpl<>(java.util.List.of(department), pageable, 1);
 
-		when(departmentRepository.findAll(pageable)).thenReturn(page);
-		when(departmentMapper.toResponse(department)).thenReturn(new DepartmentResponse());
+		when(departmentRepository.findAllByActiveTrue(pageable)).thenReturn(page);
+		when(roomRepository.countByDepartmentId(null)).thenReturn(0L);
+		when(departmentServiceCatalogRepository.countByDepartmentId(null)).thenReturn(0L);
+		when(departmentMapper.toResponse(department, 0L, 0L)).thenReturn(new DepartmentResponse());
 
 		Page<DepartmentResponse> result = departmentService.search("   ", pageable);
 
 		assertEquals(1, result.getTotalElements());
-		verify(departmentRepository).findAll(pageable);
+		verify(departmentRepository).findAllByActiveTrue(pageable);
+	}
+
+	@Test
+	void deleteShouldDeactivateDepartment() {
+		UUID id = UUID.randomUUID();
+		Department department = new Department();
+		department.setId(id);
+		department.setActive(true);
+
+		when(departmentRepository.findByIdAndActiveTrue(id)).thenReturn(Optional.of(department));
+
+		departmentService.delete(id);
+
+		verify(departmentRepository).save(department);
 	}
 }

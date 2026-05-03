@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -76,5 +77,12 @@ public class DoctorScheduleController {
 		}
 		return ApiResponse.success("Doctor schedules retrieved successfully",
 				PageResponse.from(doctorScheduleService.getAll(pageable)));
+	}
+
+	@DeleteMapping("/{id}")
+	@RequirePermission(PermissionCodes.DOCTOR_SCHEDULES_WRITE)
+	public ApiResponse<Void> delete(@PathVariable UUID id) {
+		doctorScheduleService.delete(id);
+		return ApiResponse.success("Doctor schedule deleted successfully", null);
 	}
 }

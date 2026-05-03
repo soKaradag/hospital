@@ -179,7 +179,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
 	// Doctor ilişkisinin gerçekten var olduğunu doğrular.
 	private Doctor getDoctor(UUID id) {
-		return doctorRepository.findById(id)
+		return doctorRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + id));
 	}
 

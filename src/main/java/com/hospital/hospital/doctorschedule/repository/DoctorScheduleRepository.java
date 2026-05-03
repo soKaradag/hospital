@@ -11,7 +11,11 @@ import com.hospital.hospital.doctorschedule.model.DoctorSchedule;
 
 public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, UUID> {
 
-	Page<DoctorSchedule> findAllByDoctorId(UUID doctorId, Pageable pageable);
+	java.util.Optional<DoctorSchedule> findByIdAndActiveTrue(UUID id);
 
-	Page<DoctorSchedule> findAllByDayOfWeek(DayOfWeek dayOfWeek, Pageable pageable);
+	Page<DoctorSchedule> findAllByActiveTrue(Pageable pageable);
+
+	Page<DoctorSchedule> findAllByDoctorIdAndActiveTrue(UUID doctorId, Pageable pageable);
+
+	Page<DoctorSchedule> findAllByDayOfWeekAndActiveTrue(DayOfWeek dayOfWeek, Pageable pageable);
 }

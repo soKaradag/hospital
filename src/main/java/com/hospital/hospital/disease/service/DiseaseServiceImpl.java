@@ -85,7 +85,7 @@ public class DiseaseServiceImpl implements DiseaseService {
 	@Transactional(readOnly = true)
 	// Katalogdaki tüm hastalıkları sayfalı şekilde listeler.
 	public Page<DiseaseResponse> getAll(Pageable pageable) {
-		return diseaseRepository.findAll(pageable).map(this::toResponse);
+		return diseaseRepository.findAllByActiveTrue(pageable).map(this::toResponse);
 	}
 
 	@Override
@@ -96,13 +96,23 @@ public class DiseaseServiceImpl implements DiseaseService {
 			return getAll(pageable);
 		}
 		String value = keyword.trim();
-		return diseaseRepository.findAllByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(value, value, pageable)
+		return diseaseRepository.findAllByActiveTrueAndCodeContainingIgnoreCaseOrActiveTrueAndNameContainingIgnoreCase(
+				value, value, pageable)
 				.map(this::toResponse);
+	}
+
+	@Override
+	@Transactional
+	@Audit(action = "DELETE_DISEASE", entity = "DISEASE", description = "Disease catalog soft delete")
+	public void delete(UUID id) {
+		Disease disease = getDisease(id);
+		disease.setActive(false);
+		diseaseRepository.save(disease);
 	}
 
 	// Hastalık kaydını tek noktadan bulur; bulunamazsa ortak not found hatası üretir.
 	private Disease getDisease(UUID id) {
-		return diseaseRepository.findById(id)
+		return diseaseRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Disease not found: " + id));
 	}
 

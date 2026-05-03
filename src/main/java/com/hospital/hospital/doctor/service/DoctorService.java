@@ -22,4 +22,6 @@ public interface DoctorService {
 	Page<DoctorResponse> getAllByDepartment(UUID departmentId, Pageable pageable);
 
 	Page<DoctorResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }
