@@ -15,7 +15,16 @@ public interface InventoryCategoryRepository extends JpaRepository<InventoryCate
 
 	Optional<InventoryCategory> findByCodeIgnoreCase(String code);
 
+	Optional<InventoryCategory> findByIdAndActiveTrue(UUID id);
+
+	Page<InventoryCategory> findAllByActiveTrue(Pageable pageable);
+
 	Page<InventoryCategory> findAllByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
+			String name,
+			String code,
+			Pageable pageable);
+
+	Page<InventoryCategory> findAllByActiveTrueAndNameContainingIgnoreCaseOrActiveTrueAndCodeContainingIgnoreCase(
 			String name,
 			String code,
 			Pageable pageable);

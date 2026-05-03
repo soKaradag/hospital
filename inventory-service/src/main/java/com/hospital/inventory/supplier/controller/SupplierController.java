@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -66,5 +67,12 @@ public class SupplierController {
 					PageResponse.from(supplierService.search(search, pageable)));
 		}
 		return ApiResponse.success("Suppliers retrieved successfully", PageResponse.from(supplierService.getAll(pageable)));
+	}
+
+	@DeleteMapping("/{id}")
+	@RequirePermission(PermissionCodes.INVENTORY_SUPPLIERS_WRITE)
+	public ApiResponse<Void> delete(@PathVariable UUID id) {
+		supplierService.delete(id);
+		return ApiResponse.success("Supplier deleted successfully", null);
 	}
 }

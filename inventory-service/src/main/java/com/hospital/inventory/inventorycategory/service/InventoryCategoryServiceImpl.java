@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.inventory.common.exception.BusinessRuleViolationException;
 import com.hospital.inventory.common.exception.DuplicateResourceException;
 import com.hospital.inventory.common.exception.ResourceNotFoundException;
 import com.hospital.inventory.inventorycategory.dto.CreateInventoryCategoryRequest;
@@ -15,17 +16,21 @@ import com.hospital.inventory.inventorycategory.dto.UpdateInventoryCategoryReque
 import com.hospital.inventory.inventorycategory.mapper.InventoryCategoryMapper;
 import com.hospital.inventory.inventorycategory.model.InventoryCategory;
 import com.hospital.inventory.inventorycategory.repository.InventoryCategoryRepository;
+import com.hospital.inventory.inventoryitem.repository.InventoryItemRepository;
 
 @Service
 public class InventoryCategoryServiceImpl implements InventoryCategoryService {
 
 	private final InventoryCategoryRepository inventoryCategoryRepository;
+	private final InventoryItemRepository inventoryItemRepository;
 	private final InventoryCategoryMapper inventoryCategoryMapper;
 
 	public InventoryCategoryServiceImpl(
 			InventoryCategoryRepository inventoryCategoryRepository,
+			InventoryItemRepository inventoryItemRepository,
 			InventoryCategoryMapper inventoryCategoryMapper) {
 		this.inventoryCategoryRepository = inventoryCategoryRepository;
+		this.inventoryItemRepository = inventoryItemRepository;
 		this.inventoryCategoryMapper = inventoryCategoryMapper;
 	}
 
@@ -61,7 +66,7 @@ public class InventoryCategoryServiceImpl implements InventoryCategoryService {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<InventoryCategoryResponse> getAll(Pageable pageable) {
-		return inventoryCategoryRepository.findAll(pageable).map(inventoryCategoryMapper::toResponse);
+		return inventoryCategoryRepository.findAllByActiveTrue(pageable).map(inventoryCategoryMapper::toResponse);
 	}
 
 	@Override
@@ -71,14 +76,25 @@ public class InventoryCategoryServiceImpl implements InventoryCategoryService {
 			return getAll(pageable);
 		}
 		String trimmedKeyword = keyword.trim();
-		return inventoryCategoryRepository.findAllByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
+		return inventoryCategoryRepository.findAllByActiveTrueAndNameContainingIgnoreCaseOrActiveTrueAndCodeContainingIgnoreCase(
 				trimmedKeyword,
 				trimmedKeyword,
 				pageable).map(inventoryCategoryMapper::toResponse);
 	}
 
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		InventoryCategory category = getCategory(id);
+		if (inventoryItemRepository.countByCategoryIdAndActiveTrue(id) > 0) {
+			throw new BusinessRuleViolationException("Inventory category with active items cannot be deleted");
+		}
+		category.setActive(false);
+		inventoryCategoryRepository.save(category);
+	}
+
 	private InventoryCategory getCategory(UUID id) {
-		return inventoryCategoryRepository.findById(id)
+		return inventoryCategoryRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Inventory category not found: " + id));
 	}
 }

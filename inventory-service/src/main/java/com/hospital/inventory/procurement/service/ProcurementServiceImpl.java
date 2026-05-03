@@ -223,11 +223,13 @@ public class ProcurementServiceImpl implements ProcurementService {
 
 	private Supplier getSupplier(UUID id) {
 		return supplierRepository.findById(id)
+				.filter(Supplier::isActive)
 				.orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
 	}
 
 	private InventoryItem getInventoryItem(UUID id) {
 		return inventoryItemRepository.findById(id)
+				.filter(InventoryItem::isActive)
 				.orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + id));
 	}
 
@@ -238,6 +240,7 @@ public class ProcurementServiceImpl implements ProcurementService {
 
 	private Warehouse getWarehouse(UUID id) {
 		return warehouseRepository.findById(id)
+				.filter(Warehouse::isActive)
 				.orElseThrow(() -> new ResourceNotFoundException("Warehouse not found: " + id));
 	}
 
@@ -247,6 +250,9 @@ public class ProcurementServiceImpl implements ProcurementService {
 		}
 		WarehouseZone zone = warehouseZoneRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Warehouse zone not found: " + id));
+		if (!zone.isActive()) {
+			throw new ResourceNotFoundException("Warehouse zone not found: " + id);
+		}
 		if (!zone.getWarehouse().getId().equals(warehouseId)) {
 			throw new BusinessRuleViolationException("Warehouse zone does not belong to the selected warehouse");
 		}

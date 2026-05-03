@@ -15,7 +15,16 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
 
 	Optional<Supplier> findByCodeIgnoreCase(String code);
 
+	Optional<Supplier> findByIdAndActiveTrue(UUID id);
+
+	Page<Supplier> findAllByActiveTrue(Pageable pageable);
+
 	Page<Supplier> findAllByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
+			String name,
+			String code,
+			Pageable pageable);
+
+	Page<Supplier> findAllByActiveTrueAndNameContainingIgnoreCaseOrActiveTrueAndCodeContainingIgnoreCase(
 			String name,
 			String code,
 			Pageable pageable);

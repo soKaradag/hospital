@@ -22,6 +22,11 @@ public interface ReorderRuleRepository extends JpaRepository<ReorderRule, UUID> 
 	@EntityGraph(attributePaths = { "inventoryItem", "warehouse", "warehouseZone", "preferredSupplier" })
 	java.util.List<ReorderRule> findAllByActiveTrue();
 
+	@EntityGraph(attributePaths = { "inventoryItem", "warehouse", "warehouseZone", "preferredSupplier" })
+	java.util.Optional<ReorderRule> findByIdAndActiveTrue(UUID id);
+
+	boolean existsByInventoryItemIdAndActiveTrue(UUID inventoryItemId);
+
 	@Query("""
 			select count(rule) > 0
 			from ReorderRule rule

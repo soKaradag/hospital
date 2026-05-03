@@ -58,7 +58,7 @@ public class SupplierServiceImpl implements SupplierService {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<SupplierResponse> getAll(Pageable pageable) {
-		return supplierRepository.findAll(pageable).map(supplierMapper::toResponse);
+		return supplierRepository.findAllByActiveTrue(pageable).map(supplierMapper::toResponse);
 	}
 
 	@Override
@@ -68,14 +68,22 @@ public class SupplierServiceImpl implements SupplierService {
 			return getAll(pageable);
 		}
 		String trimmedKeyword = keyword.trim();
-		return supplierRepository.findAllByNameContainingIgnoreCaseOrCodeContainingIgnoreCase(
+		return supplierRepository.findAllByActiveTrueAndNameContainingIgnoreCaseOrActiveTrueAndCodeContainingIgnoreCase(
 				trimmedKeyword,
 				trimmedKeyword,
 				pageable).map(supplierMapper::toResponse);
 	}
 
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		Supplier supplier = getSupplier(id);
+		supplier.setActive(false);
+		supplierRepository.save(supplier);
+	}
+
 	private Supplier getSupplier(UUID id) {
-		return supplierRepository.findById(id)
+		return supplierRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
 	}
 }

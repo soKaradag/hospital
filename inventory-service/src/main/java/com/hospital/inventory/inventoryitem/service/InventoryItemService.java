@@ -20,4 +20,6 @@ public interface InventoryItemService {
 	Page<InventoryItemResponse> getAll(Pageable pageable);
 
 	Page<InventoryItemResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }

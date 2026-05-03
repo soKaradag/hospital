@@ -30,6 +30,10 @@ import com.hospital.inventory.inventoryitem.model.InventoryItemUnit;
 import com.hospital.inventory.inventoryitem.repository.InventoryItemAliasRepository;
 import com.hospital.inventory.inventoryitem.repository.InventoryItemBarcodeRepository;
 import com.hospital.inventory.inventoryitem.repository.InventoryItemRepository;
+import com.hospital.inventory.planning.repository.ReorderRuleRepository;
+import com.hospital.inventory.stock.model.ReservationStatus;
+import com.hospital.inventory.stock.repository.StockBatchRepository;
+import com.hospital.inventory.stock.repository.StockReservationRepository;
 
 @Service
 public class InventoryItemServiceImpl implements InventoryItemService {
@@ -38,6 +42,9 @@ public class InventoryItemServiceImpl implements InventoryItemService {
 	private final InventoryItemAliasRepository inventoryItemAliasRepository;
 	private final InventoryItemBarcodeRepository inventoryItemBarcodeRepository;
 	private final InventoryCategoryRepository inventoryCategoryRepository;
+	private final StockBatchRepository stockBatchRepository;
+	private final StockReservationRepository stockReservationRepository;
+	private final ReorderRuleRepository reorderRuleRepository;
 	private final InventoryItemMapper inventoryItemMapper;
 
 	public InventoryItemServiceImpl(
@@ -45,11 +52,17 @@ public class InventoryItemServiceImpl implements InventoryItemService {
 			InventoryItemAliasRepository inventoryItemAliasRepository,
 			InventoryItemBarcodeRepository inventoryItemBarcodeRepository,
 			InventoryCategoryRepository inventoryCategoryRepository,
+			StockBatchRepository stockBatchRepository,
+			StockReservationRepository stockReservationRepository,
+			ReorderRuleRepository reorderRuleRepository,
 			InventoryItemMapper inventoryItemMapper) {
 		this.inventoryItemRepository = inventoryItemRepository;
 		this.inventoryItemAliasRepository = inventoryItemAliasRepository;
 		this.inventoryItemBarcodeRepository = inventoryItemBarcodeRepository;
 		this.inventoryCategoryRepository = inventoryCategoryRepository;
+		this.stockBatchRepository = stockBatchRepository;
+		this.stockReservationRepository = stockReservationRepository;
+		this.reorderRuleRepository = reorderRuleRepository;
 		this.inventoryItemMapper = inventoryItemMapper;
 	}
 
@@ -93,7 +106,7 @@ public class InventoryItemServiceImpl implements InventoryItemService {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<InventoryItemResponse> getAll(Pageable pageable) {
-		return inventoryItemRepository.findAll(pageable).map(inventoryItemMapper::toResponse);
+		return inventoryItemRepository.findAllByActiveTrue(pageable).map(inventoryItemMapper::toResponse);
 	}
 
 	@Override
@@ -105,13 +118,31 @@ public class InventoryItemServiceImpl implements InventoryItemService {
 		return inventoryItemRepository.search(keyword.trim(), pageable).map(inventoryItemMapper::toResponse);
 	}
 
+	@Override
+	@Transactional
+	public void delete(UUID id) {
+		InventoryItem item = getItem(id);
+		if (stockBatchRepository.sumQuantityOnHandByItemId(id).compareTo(BigDecimal.ZERO) > 0) {
+			throw new BusinessRuleViolationException("Inventory item with stock on hand cannot be deleted");
+		}
+		if (stockReservationRepository.sumQuantityByItemIdAndStatus(id, ReservationStatus.ACTIVE)
+				.compareTo(BigDecimal.ZERO) > 0) {
+			throw new BusinessRuleViolationException("Inventory item with active reservations cannot be deleted");
+		}
+		if (reorderRuleRepository.existsByInventoryItemIdAndActiveTrue(id)) {
+			throw new BusinessRuleViolationException("Inventory item with active reorder rules cannot be deleted");
+		}
+		item.setActive(false);
+		inventoryItemRepository.save(item);
+	}
+
 	private InventoryItem getItem(UUID id) {
-		return inventoryItemRepository.findById(id)
+		return inventoryItemRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + id));
 	}
 
 	private InventoryCategory getCategory(UUID id) {
-		return inventoryCategoryRepository.findById(id)
+		return inventoryCategoryRepository.findByIdAndActiveTrue(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Inventory category not found: " + id));
 	}
 

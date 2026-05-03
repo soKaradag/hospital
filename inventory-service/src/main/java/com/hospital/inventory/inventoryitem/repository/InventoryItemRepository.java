@@ -17,9 +17,14 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
 	@EntityGraph(attributePaths = { "category", "units" })
 	Optional<InventoryItem> findById(UUID id);
 
+	@EntityGraph(attributePaths = { "category", "units" })
+	Optional<InventoryItem> findByIdAndActiveTrue(UUID id);
+
 	boolean existsByCodeIgnoreCase(String code);
 
 	Optional<InventoryItem> findByCodeIgnoreCase(String code);
+
+	long countByCategoryIdAndActiveTrue(UUID categoryId);
 
 	@EntityGraph(attributePaths = { "category", "units" })
 	@Query("""
@@ -27,13 +32,16 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
 			from InventoryItem item
 			left join item.aliases alias
 			left join item.barcodes barcode
-			where lower(item.name) like lower(concat('%', :keyword, '%'))
-			   or lower(item.code) like lower(concat('%', :keyword, '%'))
-			   or lower(alias.alias) like lower(concat('%', :keyword, '%'))
-			   or lower(barcode.barcode) like lower(concat('%', :keyword, '%'))
+			where item.active = true
+			  and (
+			       lower(item.name) like lower(concat('%', :keyword, '%'))
+			    or lower(item.code) like lower(concat('%', :keyword, '%'))
+			    or lower(alias.alias) like lower(concat('%', :keyword, '%'))
+			    or lower(barcode.barcode) like lower(concat('%', :keyword, '%'))
+			  )
 			""")
 	Page<InventoryItem> search(@Param("keyword") String keyword, Pageable pageable);
 
 	@EntityGraph(attributePaths = { "category", "units" })
-	Page<InventoryItem> findAll(Pageable pageable);
+	Page<InventoryItem> findAllByActiveTrue(Pageable pageable);
 }

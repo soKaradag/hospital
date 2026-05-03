@@ -20,4 +20,6 @@ public interface InventoryCategoryService {
 	Page<InventoryCategoryResponse> getAll(Pageable pageable);
 
 	Page<InventoryCategoryResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }

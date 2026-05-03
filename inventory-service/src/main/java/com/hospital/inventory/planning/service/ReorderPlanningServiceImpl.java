@@ -64,7 +64,7 @@ public class ReorderPlanningServiceImpl implements ReorderPlanningService {
 			throw new BusinessRuleViolationException("targetQuantity must be greater than or equal to minQuantity");
 		}
 
-		InventoryItem inventoryItem = inventoryItemRepository.findById(request.getInventoryItemId())
+		InventoryItem inventoryItem = inventoryItemRepository.findByIdAndActiveTrue(request.getInventoryItemId())
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Inventory item not found: " + request.getInventoryItemId()));
 		Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
@@ -109,12 +109,24 @@ public class ReorderPlanningServiceImpl implements ReorderPlanningService {
 				.toList();
 	}
 
+	@Override
+	@Transactional
+	public void deleteRule(UUID id) {
+		ReorderRule rule = reorderRuleRepository.findByIdAndActiveTrue(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Reorder rule not found: " + id));
+		rule.setActive(false);
+		reorderRuleRepository.save(rule);
+	}
+
 	private WarehouseZone getWarehouseZone(UUID warehouseZoneId, UUID warehouseId) {
 		if (warehouseZoneId == null) {
 			return null;
 		}
 		WarehouseZone warehouseZone = warehouseZoneRepository.findById(warehouseZoneId)
 				.orElseThrow(() -> new ResourceNotFoundException("Warehouse zone not found: " + warehouseZoneId));
+		if (!warehouseZone.isActive()) {
+			throw new ResourceNotFoundException("Warehouse zone not found: " + warehouseZoneId);
+		}
 		if (!warehouseZone.getWarehouse().getId().equals(warehouseId)) {
 			throw new BusinessRuleViolationException("Warehouse zone does not belong to the selected warehouse");
 		}
@@ -125,7 +137,7 @@ public class ReorderPlanningServiceImpl implements ReorderPlanningService {
 		if (supplierId == null) {
 			return null;
 		}
-		return supplierRepository.findById(supplierId)
+		return supplierRepository.findByIdAndActiveTrue(supplierId)
 				.orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + supplierId));
 	}
 

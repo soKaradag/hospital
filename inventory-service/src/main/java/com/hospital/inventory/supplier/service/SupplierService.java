@@ -20,4 +20,6 @@ public interface SupplierService {
 	Page<SupplierResponse> getAll(Pageable pageable);
 
 	Page<SupplierResponse> search(String keyword, Pageable pageable);
+
+	void delete(UUID id);
 }
