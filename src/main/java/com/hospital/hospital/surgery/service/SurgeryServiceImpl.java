@@ -266,7 +266,6 @@ public class SurgeryServiceImpl implements SurgeryService {
 		surgery.setStatus("COMPLETED");
 		surgery.setNote(trimToNull(request.getNote()));
 		try {
-			inventoryConsumptionClient.releaseSurgeryReservations(surgery);
 			inventoryConsumptionClient.consumeSurgerySupplies(surgery);
 			surgery.setInventoryStatus("CONSUMED");
 			appendStatusHistory(surgery, "COMPLETED", "Surgery completed and supplies consumed");

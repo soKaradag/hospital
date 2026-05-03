@@ -66,19 +66,25 @@ public class StockTransferServiceImpl implements StockTransferService {
 				.orElseThrow(() -> new ResourceNotFoundException("Source warehouse not found: " + request.getFromWarehouseId()));
 		Warehouse toWarehouse = warehouseRepository.findById(request.getToWarehouseId())
 				.orElseThrow(() -> new ResourceNotFoundException("Destination warehouse not found: " + request.getToWarehouseId()));
-		WarehouseZone fromZone = request.getFromWarehouseZoneId() != null
-				? warehouseZoneRepository.findById(request.getFromWarehouseZoneId())
-						.orElseThrow(() -> new ResourceNotFoundException(
-								"Source warehouse zone not found: " + request.getFromWarehouseZoneId()))
-				: null;
-		WarehouseZone toZone = request.getToWarehouseZoneId() != null
-				? warehouseZoneRepository.findById(request.getToWarehouseZoneId())
-						.orElseThrow(() -> new ResourceNotFoundException(
-								"Destination warehouse zone not found: " + request.getToWarehouseZoneId()))
-				: null;
+		WarehouseZone fromZone = getWarehouseZone(
+				request.getFromWarehouseZoneId(),
+				fromWarehouse.getId(),
+				"Source warehouse zone not found: ",
+				"Source warehouse zone does not belong to the requested warehouse");
+		WarehouseZone toZone = getWarehouseZone(
+				request.getToWarehouseZoneId(),
+				toWarehouse.getId(),
+				"Destination warehouse zone not found: ",
+				"Destination warehouse zone does not belong to the requested warehouse");
 
 		if (!sourceBatch.getInventoryItem().getId().equals(item.getId())) {
 			throw new BusinessRuleViolationException("Source batch does not belong to the requested inventory item");
+		}
+		if (!sourceBatch.getWarehouse().getId().equals(fromWarehouse.getId())) {
+			throw new BusinessRuleViolationException("Source batch does not belong to the requested warehouse");
+		}
+		if (!sameZone(sourceBatch.getWarehouseZone(), fromZone)) {
+			throw new BusinessRuleViolationException("Source batch does not belong to the requested warehouse zone");
 		}
 		if (request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
 			throw new BusinessRuleViolationException("Transfer quantity must be greater than zero");
@@ -128,6 +134,22 @@ public class StockTransferServiceImpl implements StockTransferService {
 		return toResponse(savedRequest, savedTransfer);
 	}
 
+	private WarehouseZone getWarehouseZone(
+			java.util.UUID zoneId,
+			java.util.UUID warehouseId,
+			String notFoundMessagePrefix,
+			String ownershipMessage) {
+		if (zoneId == null) {
+			return null;
+		}
+		WarehouseZone zone = warehouseZoneRepository.findById(zoneId)
+				.orElseThrow(() -> new ResourceNotFoundException(notFoundMessagePrefix + zoneId));
+		if (!zone.getWarehouse().getId().equals(warehouseId)) {
+			throw new BusinessRuleViolationException(ownershipMessage);
+		}
+		return zone;
+	}
+
 	private StockBatch findOrCreateDestinationBatch(StockBatch sourceBatch, Warehouse toWarehouse, WarehouseZone toZone) {
 		return stockBatchRepository.findAllByInventoryItemIdAndActiveTrueOrderByExpiresAtAscBatchNumberAsc(
 				sourceBatch.getInventoryItem().getId()).stream()
@@ -171,6 +193,13 @@ public class StockTransferServiceImpl implements StockTransferService {
 		movement.setReferenceId(referenceId);
 		movement.setNotes(notes != null ? notes.trim() : null);
 		return movement;
+	}
+
+	private boolean sameZone(WarehouseZone left, WarehouseZone right) {
+		if (left == null || right == null) {
+			return left == right;
+		}
+		return left.getId().equals(right.getId());
 	}
 
 	private StockTransferResponse toResponse(StockTransferRequest request, StockTransfer transfer) {

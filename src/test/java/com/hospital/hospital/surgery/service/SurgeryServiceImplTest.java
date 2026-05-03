@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -168,7 +170,6 @@ class SurgeryServiceImplTest {
 		when(surgeryRepository.save(any(Surgery.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		when(surgeryTeamAssignmentRepository.countBySurgeryId(any())).thenReturn(1L);
 		when(surgeryStatusHistoryRepository.countBySurgeryId(any())).thenReturn(3L);
-		when(inventoryConsumptionClient.releaseSurgeryReservations(surgery)).thenReturn(new SurgeryInventoryReservationResponse());
 		doNothing().when(inventoryConsumptionClient).consumeSurgerySupplies(surgery);
 
 		UpdateSurgeryLifecycleRequest request = new UpdateSurgeryLifecycleRequest();
@@ -178,6 +179,8 @@ class SurgeryServiceImplTest {
 
 		assertEquals("COMPLETED", response.getStatus());
 		assertEquals("CONSUMED", response.getInventoryStatus());
+		verify(inventoryConsumptionClient, never()).releaseSurgeryReservations(surgery);
+		verify(inventoryConsumptionClient).consumeSurgerySupplies(surgery);
 	}
 
 	private SurgeryRequest surgeryRequest(UUID id, UUID doctorId, String procedureCode) {

@@ -1,7 +1,9 @@
 package com.hospital.inventory.stock.service;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -67,11 +69,7 @@ public class StockCountServiceImpl implements StockCountService {
 	public StockCountResponse create(CreateStockCountRequest request) {
 		Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
 				.orElseThrow(() -> new ResourceNotFoundException("Warehouse not found: " + request.getWarehouseId()));
-		WarehouseZone zone = request.getWarehouseZoneId() != null
-				? warehouseZoneRepository.findById(request.getWarehouseZoneId())
-						.orElseThrow(() -> new ResourceNotFoundException(
-								"Warehouse zone not found: " + request.getWarehouseZoneId()))
-				: null;
+		WarehouseZone zone = getWarehouseZone(request.getWarehouseZoneId(), warehouse.getId());
 
 		StockCount stockCount = new StockCount();
 		stockCount.setWarehouse(warehouse);
@@ -80,6 +78,7 @@ public class StockCountServiceImpl implements StockCountService {
 		stockCount.setNotes(request.getNotes() != null ? request.getNotes().trim() : null);
 		StockCount savedCount = stockCountRepository.save(stockCount);
 
+		Set<UUID> seenBatchIds = new HashSet<>();
 		for (StockCountLineRequest lineRequest : request.getLines()) {
 			InventoryItem item = inventoryItemRepository.findById(lineRequest.getItemId())
 					.orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + lineRequest.getItemId()));
@@ -88,6 +87,10 @@ public class StockCountServiceImpl implements StockCountService {
 			if (!batch.getInventoryItem().getId().equals(item.getId())) {
 				throw new BusinessRuleViolationException("Batch does not belong to the requested inventory item");
 			}
+			if (!seenBatchIds.add(batch.getId())) {
+				throw new BusinessRuleViolationException("Duplicate batch cannot appear more than once in a stock count");
+			}
+			validateBatchLocation(batch, warehouse, zone);
 
 			StockCountLine line = new StockCountLine();
 			line.setStockCount(savedCount);
@@ -150,6 +153,27 @@ public class StockCountServiceImpl implements StockCountService {
 		return toResponse(stockCount, lines);
 	}
 
+	private WarehouseZone getWarehouseZone(UUID warehouseZoneId, UUID warehouseId) {
+		if (warehouseZoneId == null) {
+			return null;
+		}
+		WarehouseZone zone = warehouseZoneRepository.findById(warehouseZoneId)
+				.orElseThrow(() -> new ResourceNotFoundException("Warehouse zone not found: " + warehouseZoneId));
+		if (!zone.getWarehouse().getId().equals(warehouseId)) {
+			throw new BusinessRuleViolationException("Warehouse zone does not belong to the selected warehouse");
+		}
+		return zone;
+	}
+
+	private void validateBatchLocation(StockBatch batch, Warehouse warehouse, WarehouseZone zone) {
+		if (!batch.getWarehouse().getId().equals(warehouse.getId())) {
+			throw new BusinessRuleViolationException("Batch does not belong to the selected warehouse");
+		}
+		if (!sameZone(batch.getWarehouseZone(), zone)) {
+			throw new BusinessRuleViolationException("Batch does not belong to the selected warehouse zone");
+		}
+	}
+
 	private StockCountResponse toResponse(StockCount stockCount, List<StockCountLine> lines) {
 		StockCountResponse response = new StockCountResponse();
 		response.setId(stockCount.getId());
@@ -174,5 +198,12 @@ public class StockCountServiceImpl implements StockCountService {
 		response.setDifferenceQuantity(line.getDifferenceQuantity());
 		response.setNotes(line.getNotes());
 		return response;
+	}
+
+	private boolean sameZone(WarehouseZone left, WarehouseZone right) {
+		if (left == null || right == null) {
+			return left == right;
+		}
+		return left.getId().equals(right.getId());
 	}
 }

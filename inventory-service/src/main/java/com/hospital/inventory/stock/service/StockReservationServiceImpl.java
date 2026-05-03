@@ -35,6 +35,7 @@ public class StockReservationServiceImpl implements StockReservationService {
 	private final StockReservationRepository stockReservationRepository;
 	private final WarehouseRepository warehouseRepository;
 	private final WarehouseZoneRepository warehouseZoneRepository;
+	private final StockBatchAllocationService stockBatchAllocationService;
 
 	public StockReservationServiceImpl(
 			InventoryItemRepository inventoryItemRepository,
@@ -42,13 +43,15 @@ public class StockReservationServiceImpl implements StockReservationService {
 			StockMovementRepository stockMovementRepository,
 			StockReservationRepository stockReservationRepository,
 			WarehouseRepository warehouseRepository,
-			WarehouseZoneRepository warehouseZoneRepository) {
+			WarehouseZoneRepository warehouseZoneRepository,
+			StockBatchAllocationService stockBatchAllocationService) {
 		this.inventoryItemRepository = inventoryItemRepository;
 		this.stockBatchRepository = stockBatchRepository;
 		this.stockMovementRepository = stockMovementRepository;
 		this.stockReservationRepository = stockReservationRepository;
 		this.warehouseRepository = warehouseRepository;
 		this.warehouseZoneRepository = warehouseZoneRepository;
+		this.stockBatchAllocationService = stockBatchAllocationService;
 	}
 
 	@Override
@@ -58,21 +61,23 @@ public class StockReservationServiceImpl implements StockReservationService {
 				.orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + request.getItemId()));
 		Warehouse warehouse = warehouseRepository.findById(request.getWarehouseId())
 				.orElseThrow(() -> new ResourceNotFoundException("Warehouse not found: " + request.getWarehouseId()));
-		WarehouseZone zone = request.getWarehouseZoneId() != null
-				? warehouseZoneRepository.findById(request.getWarehouseZoneId())
-						.orElseThrow(() -> new ResourceNotFoundException(
-								"Warehouse zone not found: " + request.getWarehouseZoneId()))
-				: null;
+		WarehouseZone zone = getWarehouseZone(request.getWarehouseZoneId(), warehouse.getId());
 
-		StockBatch batch = resolveBatch(request.getBatchId(), item.getId());
-		validateAvailability(item.getId(), batch != null ? batch.getId() : null, request.getQuantity());
+		StockBatchAllocationService.BatchAllocation allocation = request.getBatchId() != null
+				? stockBatchAllocationService.resolveExplicitBatchAllocation(
+						item,
+						warehouse,
+						zone,
+						request.getBatchId(),
+						request.getQuantity())
+				: stockBatchAllocationService.resolveSingleBatchAllocation(item, warehouse, zone, request.getQuantity());
 
 		StockReservation reservation = new StockReservation();
 		reservation.setInventoryItem(item);
-		reservation.setStockBatch(batch);
+		reservation.setStockBatch(allocation.batch());
 		reservation.setWarehouse(warehouse);
 		reservation.setWarehouseZone(zone);
-		reservation.setQuantity(request.getQuantity());
+		reservation.setQuantity(allocation.quantity());
 		reservation.setStatus(ReservationStatus.ACTIVE);
 		reservation.setReservationType(request.getReservationType().trim());
 		reservation.setReferenceType(request.getReferenceType() != null ? request.getReferenceType().trim() : null);
@@ -95,38 +100,16 @@ public class StockReservationServiceImpl implements StockReservationService {
 		return toResponse(stockReservationRepository.save(reservation));
 	}
 
-	private StockBatch resolveBatch(UUID batchId, UUID itemId) {
-		if (batchId == null) {
+	private WarehouseZone getWarehouseZone(UUID warehouseZoneId, UUID warehouseId) {
+		if (warehouseZoneId == null) {
 			return null;
 		}
-		StockBatch batch = stockBatchRepository.findById(batchId)
-				.orElseThrow(() -> new ResourceNotFoundException("Stock batch not found: " + batchId));
-		if (!batch.getInventoryItem().getId().equals(itemId)) {
-			throw new BusinessRuleViolationException("Batch does not belong to the requested inventory item");
+		WarehouseZone zone = warehouseZoneRepository.findById(warehouseZoneId)
+				.orElseThrow(() -> new ResourceNotFoundException("Warehouse zone not found: " + warehouseZoneId));
+		if (!zone.getWarehouse().getId().equals(warehouseId)) {
+			throw new BusinessRuleViolationException("Warehouse zone does not belong to the requested warehouse");
 		}
-		return batch;
-	}
-
-	private void validateAvailability(UUID itemId, UUID batchId, BigDecimal requestedQuantity) {
-		if (batchId != null) {
-			StockBatch batch = stockBatchRepository.findById(batchId)
-					.orElseThrow(() -> new ResourceNotFoundException("Stock batch not found: " + batchId));
-			BigDecimal reservedQuantity = stockReservationRepository.sumQuantityByBatchIdAndStatus(batchId,
-					ReservationStatus.ACTIVE);
-			BigDecimal availableQuantity = batch.getQuantityOnHand().subtract(reservedQuantity);
-			if (availableQuantity.compareTo(requestedQuantity) < 0) {
-				throw new BusinessRuleViolationException("Insufficient stock available in the requested batch");
-			}
-			return;
-		}
-
-		BigDecimal totalOnHand = stockBatchRepository.sumQuantityOnHandByItemId(itemId);
-		BigDecimal reservedQuantity = stockReservationRepository.sumQuantityByItemIdAndStatus(itemId,
-				ReservationStatus.ACTIVE);
-		BigDecimal availableQuantity = totalOnHand.subtract(reservedQuantity);
-		if (availableQuantity.compareTo(requestedQuantity) < 0) {
-			throw new BusinessRuleViolationException("Insufficient stock available for reservation");
-		}
+		return zone;
 	}
 
 	private StockMovement createMovement(StockReservation reservation, MovementType movementType, String notes) {
