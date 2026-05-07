@@ -54,6 +54,10 @@ public class DoctorMapper {
 			response.setDepartmentId(doctor.getDepartment().getId());
 			response.setDepartmentName(doctor.getDepartment().getName());
 		}
+		if (doctor.getUser() != null) {
+			response.setUserId(doctor.getUser().getId());
+			response.setUsername(doctor.getUser().getUsername());
+		}
 		response.setCreatedAt(doctor.getCreatedAt());
 		response.setUpdatedAt(doctor.getUpdatedAt());
 		return response;

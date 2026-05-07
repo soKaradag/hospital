@@ -1,5 +1,6 @@
 package com.hospital.hospital.doctor.model;
 
+import com.hospital.hospital.auth.model.User;
 import com.hospital.hospital.common.model.Contact;
 import com.hospital.hospital.common.model.BaseEntity;
 import com.hospital.hospital.department.model.Department;
@@ -52,6 +53,10 @@ public class Doctor extends BaseEntity {
 	@JoinColumn(name = "department_id", nullable = false)
 	private Department department;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", unique = true)
+	private User user;
+
 	public String getFirstName() {
 		return firstName;
 	}
@@ -98,5 +103,13 @@ public class Doctor extends BaseEntity {
 
 	public void setDepartment(Department department) {
 		this.department = department;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
 	}
 }

@@ -14,6 +14,8 @@ public class DoctorResponse {
 	private ContactDto contact;
 	private UUID departmentId;
 	private String departmentName;
+	private UUID userId;
+	private String username;
 	private Instant createdAt;
 	private Instant updatedAt;
 
@@ -74,6 +76,22 @@ public class DoctorResponse {
 
 	public void setDepartmentName(String departmentName) {
 		this.departmentName = departmentName;
+	}
+
+	public UUID getUserId() {
+		return userId;
+	}
+
+	public void setUserId(UUID userId) {
+		this.userId = userId;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
 	}
 
 	public Instant getCreatedAt() {

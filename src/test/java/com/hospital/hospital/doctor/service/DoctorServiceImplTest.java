@@ -19,9 +19,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.model.User;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
+import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.department.model.Department;
 import com.hospital.hospital.department.repository.DepartmentRepository;
+import com.hospital.hospital.auth.repository.UserRepository;
+import com.hospital.hospital.auth.repository.UserRoleRepository;
 import com.hospital.hospital.doctor.dto.CreateDoctorRequest;
 import com.hospital.hospital.doctor.dto.DoctorResponse;
 import com.hospital.hospital.doctor.mapper.DoctorMapper;
@@ -47,6 +52,12 @@ class DoctorServiceImplTest {
 
 	@Mock
 	private DoctorSpecialtyRepository doctorSpecialtyRepository;
+
+	@Mock
+	private UserRepository userRepository;
+
+	@Mock
+	private UserRoleRepository userRoleRepository;
 
 	@InjectMocks
 	private DoctorServiceImpl doctorService;
@@ -142,5 +153,62 @@ class DoctorServiceImplTest {
 		doctorService.delete(id);
 
 		verify(doctorRepository).save(doctor);
+	}
+
+	@Test
+	void createShouldLinkDoctorUserWhenAssignedUserHasDoctorRole() {
+		UUID departmentId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		CreateDoctorRequest request = new CreateDoctorRequest();
+		request.setDepartmentId(departmentId);
+		request.setUserId(userId);
+
+		Department department = new Department();
+		department.setId(departmentId);
+
+		User user = new User("doctor.user", "hash", Role.DOCTOR);
+		user.setId(userId);
+
+		Doctor mappedDoctor = new Doctor();
+		Doctor savedDoctor = new Doctor();
+		savedDoctor.setDepartment(department);
+		savedDoctor.setUser(user);
+
+		when(doctorMapper.toEntity(request)).thenReturn(mappedDoctor);
+		when(departmentRepository.findByIdAndActiveTrue(departmentId)).thenReturn(Optional.of(department));
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(userRoleRepository.hasRoleCode(userId, Role.DOCTOR.name())).thenReturn(true);
+		when(doctorRepository.existsByUser_IdAndActiveTrue(userId)).thenReturn(false);
+		when(doctorRepository.save(mappedDoctor)).thenReturn(savedDoctor);
+		when(doctorMapper.toResponse(savedDoctor)).thenReturn(new DoctorResponse());
+
+		doctorService.create(request);
+
+		assertEquals(user, mappedDoctor.getUser());
+	}
+
+	@Test
+	void createShouldRejectLinkedUsersWithoutDoctorRole() {
+		UUID departmentId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		CreateDoctorRequest request = new CreateDoctorRequest();
+		request.setDepartmentId(departmentId);
+		request.setUserId(userId);
+
+		Department department = new Department();
+		department.setId(departmentId);
+
+		User user = new User("admin.user", "hash", Role.ADMIN);
+		user.setId(userId);
+
+		when(doctorMapper.toEntity(request)).thenReturn(new Doctor());
+		when(departmentRepository.findByIdAndActiveTrue(departmentId)).thenReturn(Optional.of(department));
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(userRoleRepository.hasRoleCode(userId, Role.DOCTOR.name())).thenReturn(false);
+
+		BusinessRuleViolationException exception = assertThrows(BusinessRuleViolationException.class,
+				() -> doctorService.create(request));
+
+		assertEquals("Linked user must have DOCTOR role", exception.getMessage());
 	}
 }

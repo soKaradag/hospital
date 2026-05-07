@@ -28,6 +28,8 @@ public class CreateDoctorRequest {
 	@NotNull
 	private UUID departmentId;
 
+	private UUID userId;
+
 	public CreateDoctorRequest() {
 	}
 
@@ -69,5 +71,13 @@ public class CreateDoctorRequest {
 
 	public void setDepartmentId(UUID departmentId) {
 		this.departmentId = departmentId;
+	}
+
+	public UUID getUserId() {
+		return userId;
+	}
+
+	public void setUserId(UUID userId) {
+		this.userId = userId;
 	}
 }

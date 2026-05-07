@@ -25,6 +25,7 @@ import com.hospital.hospital.auth.dto.RefreshTokenRequest;
 import com.hospital.hospital.auth.model.RefreshToken;
 import com.hospital.hospital.auth.model.Role;
 import com.hospital.hospital.auth.model.User;
+import com.hospital.hospital.auth.model.UserStatus;
 import com.hospital.hospital.auth.repository.RefreshTokenRepository;
 import com.hospital.hospital.auth.repository.UserRepository;
 import com.hospital.hospital.auth.token.AuthTokenPair;
@@ -49,6 +50,9 @@ class AuthServiceImplTest {
 	@Mock
 	private CurrentUserContext currentUserContext;
 
+	@Mock
+	private PermissionResolutionService permissionResolutionService;
+
 	@InjectMocks
 	private AuthServiceImpl authService;
 
@@ -63,6 +67,7 @@ class AuthServiceImplTest {
 
 		when(userRepository.findByUsername("doctor1")).thenReturn(Optional.of(user));
 		when(passwordHashService.matches("secret", "stored-hash")).thenReturn(true);
+		when(permissionResolutionService.resolveRoleCodes(user.getId())).thenReturn(java.util.List.of(Role.DOCTOR.name()));
 		when(jwtTokenService.generateTokenPair(user)).thenReturn(new AuthTokenPair("access-token", "refresh-token"));
 		when(jwtTokenService.parseRefreshToken("refresh-token")).thenReturn(new TokenPrincipal(
 				user.getId(),
@@ -83,6 +88,42 @@ class AuthServiceImplTest {
 		verify(refreshTokenRepository).save(refreshTokenCaptor.capture());
 		assertEquals("hashed-refresh-token", refreshTokenCaptor.getValue().getTokenHash());
 		assertEquals(user, refreshTokenCaptor.getValue().getUser());
+	}
+
+	@Test
+	void loginShouldRejectInactiveUsers() {
+		User user = new User("doctor1", "stored-hash", Role.DOCTOR);
+		user.setId(UUID.randomUUID());
+		user.setStatus(UserStatus.LOCKED);
+
+		LoginRequest request = new LoginRequest();
+		request.setUsername("doctor1");
+		request.setPassword("secret");
+
+		when(userRepository.findByUsername("doctor1")).thenReturn(Optional.of(user));
+		when(passwordHashService.matches("secret", "stored-hash")).thenReturn(true);
+
+		UnauthorizedException exception = assertThrows(UnauthorizedException.class, () -> authService.login(request));
+
+		assertEquals("User account is not active", exception.getMessage());
+	}
+
+	@Test
+	void loginShouldRejectUsersWithoutAssignedRole() {
+		User user = new User("doctor1", "stored-hash", Role.DOCTOR);
+		user.setId(UUID.randomUUID());
+
+		LoginRequest request = new LoginRequest();
+		request.setUsername("doctor1");
+		request.setPassword("secret");
+
+		when(userRepository.findByUsername("doctor1")).thenReturn(Optional.of(user));
+		when(passwordHashService.matches("secret", "stored-hash")).thenReturn(true);
+		when(permissionResolutionService.resolveRoleCodes(user.getId())).thenReturn(java.util.List.of());
+
+		UnauthorizedException exception = assertThrows(UnauthorizedException.class, () -> authService.login(request));
+
+		assertEquals("User account does not have an assigned role", exception.getMessage());
 	}
 
 	@Test

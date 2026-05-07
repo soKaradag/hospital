@@ -7,6 +7,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.auth.model.Role;
+import com.hospital.hospital.auth.model.User;
+import com.hospital.hospital.auth.repository.UserRepository;
+import com.hospital.hospital.auth.repository.UserRoleRepository;
+import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.department.model.Department;
 import com.hospital.hospital.department.repository.DepartmentRepository;
@@ -29,15 +34,20 @@ public class DoctorServiceImpl implements DoctorService {
 	private final DoctorMapper doctorMapper;
 	private final SpecialtyRepository specialtyRepository;
 	private final DoctorSpecialtyRepository doctorSpecialtyRepository;
+	private final UserRepository userRepository;
+	private final UserRoleRepository userRoleRepository;
 
 	public DoctorServiceImpl(DoctorRepository doctorRepository, DepartmentRepository departmentRepository,
 			DoctorMapper doctorMapper, SpecialtyRepository specialtyRepository,
-			DoctorSpecialtyRepository doctorSpecialtyRepository) {
+			DoctorSpecialtyRepository doctorSpecialtyRepository, UserRepository userRepository,
+			UserRoleRepository userRoleRepository) {
 		this.doctorRepository = doctorRepository;
 		this.departmentRepository = departmentRepository;
 		this.doctorMapper = doctorMapper;
 		this.specialtyRepository = specialtyRepository;
 		this.doctorSpecialtyRepository = doctorSpecialtyRepository;
+		this.userRepository = userRepository;
+		this.userRoleRepository = userRoleRepository;
 	}
 
 	@Override
@@ -45,6 +55,7 @@ public class DoctorServiceImpl implements DoctorService {
 	public DoctorResponse create(CreateDoctorRequest request) {
 		Doctor doctor = doctorMapper.toEntity(request);
 		doctor.setDepartment(getDepartment(request.getDepartmentId()));
+		doctor.setUser(resolveLinkedUser(request.getUserId(), null));
 		Doctor savedDoctor = doctorRepository.save(doctor);
 		syncPrimarySpecialty(savedDoctor, request.getSpecialization());
 		return doctorMapper.toResponse(savedDoctor);
@@ -56,6 +67,7 @@ public class DoctorServiceImpl implements DoctorService {
 		Doctor doctor = getDoctor(id);
 		doctorMapper.updateEntity(request, doctor);
 		doctor.setDepartment(getDepartment(request.getDepartmentId()));
+		doctor.setUser(resolveLinkedUser(request.getUserId(), id));
 		Doctor savedDoctor = doctorRepository.save(doctor);
 		syncPrimarySpecialty(savedDoctor, request.getSpecialization());
 		return doctorMapper.toResponse(savedDoctor);
@@ -145,5 +157,24 @@ public class DoctorServiceImpl implements DoctorService {
 
 	private String toCode(String name) {
 		return name.trim().replaceAll("\\s+", "_").toUpperCase();
+	}
+
+	private User resolveLinkedUser(UUID userId, UUID doctorId) {
+		if (userId == null) {
+			return null;
+		}
+
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+		if (!userRoleRepository.hasRoleCode(userId, Role.DOCTOR.name())) {
+			throw new BusinessRuleViolationException("Linked user must have DOCTOR role");
+		}
+		boolean alreadyLinked = doctorId == null
+				? doctorRepository.existsByUser_IdAndActiveTrue(userId)
+				: doctorRepository.existsByUser_IdAndIdNotAndActiveTrue(userId, doctorId);
+		if (alreadyLinked) {
+			throw new BusinessRuleViolationException("Linked user is already assigned to another doctor");
+		}
+		return user;
 	}
 }

@@ -30,4 +30,24 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
 			order by userRole.role.code asc
 			""")
 	Optional<String> findPrimaryRoleCodeByUserId(UUID userId);
+
+	long countByUser_Id(UUID userId);
+
+	void deleteByUser_Id(UUID userId);
+
+	@Query("""
+			select case when count(userRole) > 0 then true else false end
+			from UserRole userRole
+			where userRole.user.id = :userId and userRole.role.code = :roleCode
+			""")
+	boolean hasRoleCode(UUID userId, String roleCode);
+
+	@Query("""
+			select case when count(distinct userRole.user.id) > 0 then true else false end
+			from UserRole userRole
+			where userRole.role.code = 'ADMIN'
+			  and userRole.user.status = com.hospital.hospital.auth.model.UserStatus.ACTIVE
+			  and userRole.user.id <> :excludedUserId
+			""")
+	boolean existsActiveAdminExcluding(UUID excludedUserId);
 }

@@ -11,6 +11,10 @@ import com.hospital.hospital.auth.model.Permission;
 
 public interface PermissionRepository extends JpaRepository<Permission, UUID> {
 
+	List<Permission> findAllByOrderByCodeAsc();
+
+	List<Permission> findAllByCodeInOrderByCodeAsc(Collection<String> codes);
+
 	@Query("""
 			select distinct permission.code
 			from RolePermission rolePermission

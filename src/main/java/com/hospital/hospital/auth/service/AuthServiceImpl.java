@@ -65,6 +65,14 @@ public class AuthServiceImpl implements AuthService {
 			throw new UnauthorizedException("Invalid username or password");
 		}
 
+		if (user.getStatus() != null && user.getStatus() != com.hospital.hospital.auth.model.UserStatus.ACTIVE) {
+			throw new UnauthorizedException("User account is not active");
+		}
+
+		if (permissionResolutionService.resolveRoleCodes(user.getId()).isEmpty()) {
+			throw new UnauthorizedException("User account does not have an assigned role");
+		}
+
 		AuthTokenPair tokenPair = jwtTokenService.generateTokenPair(user);
 		saveRefreshToken(user, tokenPair.refreshToken());
 

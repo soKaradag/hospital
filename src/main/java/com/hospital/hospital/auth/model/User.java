@@ -22,6 +22,7 @@ public class User extends BaseEntity {
 		this.username = username;
 		this.passwordHash = passwordHash;
 		this.role = role;
+		this.status = UserStatus.ACTIVE;
 	}
 
 	// Username giriş kimliğidir ve sistem genelinde benzersiz olmalıdır.
@@ -31,6 +32,10 @@ public class User extends BaseEntity {
 	// Şifre hiçbir zaman düz metin tutulmaz; sadece hash değeri saklanır.
 	@Column(name = "password_hash", nullable = false, length = 255)
 	private String passwordHash;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 30)
+	private UserStatus status = UserStatus.ACTIVE;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "role", nullable = false, length = 30)
@@ -61,6 +66,14 @@ public class User extends BaseEntity {
 
 	public void setRole(Role role) {
 		this.role = role;
+	}
+
+	public UserStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(UserStatus status) {
+		this.status = status;
 	}
 
 	public UserInfo getUserInfo() {

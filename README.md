@@ -117,6 +117,7 @@ Detayli aciklamalar `docs` klasoru altindadir:
 - [Faz 3 - Uygulama Yurutme Plani](docs/phase-3-execution-plan.md)
 - [Faz 4 - Inventory Service Tasarimi](docs/phase-4-inventory-service-design.md)
 - [Faz 4 - Inventory Service Yurutme Plani](docs/phase-4-execution-plan.md)
+- [Admin Access Control Tasarimi](docs/admin-access-control-design.md)
 
 ## Sonraki Yon
 - Faz 4 foundation artik iki servisli local runtime ve smoke ile dogrulanmis durumdadir.

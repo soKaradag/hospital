@@ -39,4 +39,8 @@ public interface DoctorRepository extends JpaRepository<Doctor, UUID> {
 			String lastNameKeyword,
 			String specializationKeyword,
 			Pageable pageable);
+
+	boolean existsByUser_IdAndActiveTrue(UUID userId);
+
+	boolean existsByUser_IdAndIdNotAndActiveTrue(UUID userId, UUID id);
 }

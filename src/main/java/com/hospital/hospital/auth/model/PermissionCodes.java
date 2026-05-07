@@ -4,6 +4,11 @@ public final class PermissionCodes {
 
 	public static final String AUTH_READ = "auth.read";
 	public static final String AUTH_WRITE = "auth.write";
+	public static final String ACCESS_CONTROL_ROLES_READ = "access-control.roles.read";
+	public static final String ACCESS_CONTROL_ROLES_WRITE = "access-control.roles.write";
+	public static final String ACCESS_CONTROL_PERMISSIONS_READ = "access-control.permissions.read";
+	public static final String ACCESS_CONTROL_USERS_READ = "access-control.users.read";
+	public static final String ACCESS_CONTROL_USERS_WRITE = "access-control.users.write";
 	public static final String DEPARTMENTS_READ = "departments.read";
 	public static final String DEPARTMENTS_WRITE = "departments.write";
 	public static final String DOCTORS_READ = "doctors.read";
