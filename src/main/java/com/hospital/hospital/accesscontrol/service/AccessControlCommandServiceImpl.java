@@ -17,6 +17,7 @@ import com.hospital.hospital.accesscontrol.dto.UpdateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
 import com.hospital.hospital.accesscontrol.dto.UserDetailResponse;
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.auth.model.Permission;
 import com.hospital.hospital.auth.model.Role;
 import com.hospital.hospital.auth.model.RoleEntity;
@@ -71,6 +72,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_ACCESS_CONTROL_ROLE", entity = "ACCESS_CONTROL_ROLE", description = "Access control role creation")
 	public RoleDetailResponse createRole(CreateRoleRequest request) {
 		String roleCode = request.getCode().trim();
 		if (roleEntityRepository.existsByCode(roleCode)) {
@@ -84,6 +86,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_ROLE", entity = "ACCESS_CONTROL_ROLE", description = "Access control role update")
 	public RoleDetailResponse updateRole(UUID id, UpdateRoleRequest request) {
 		RoleEntity role = roleEntityRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Role not found: " + id));
@@ -105,6 +108,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_ROLE_PERMISSIONS", entity = "ACCESS_CONTROL_ROLE", description = "Access control role permissions update")
 	public RoleDetailResponse updateRolePermissions(UUID id, UpdateRolePermissionsRequest request) {
 		RoleEntity role = roleEntityRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Role not found: " + id));
@@ -131,6 +135,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_ACCESS_CONTROL_USER", entity = "ACCESS_CONTROL_USER", description = "Access control user creation")
 	public UserDetailResponse createUser(CreateUserRequest request) {
 		String username = request.getUsername().trim();
 		if (userRepository.existsByUsername(username)) {
@@ -157,6 +162,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_USER", entity = "ACCESS_CONTROL_USER", description = "Access control user profile update")
 	public UserDetailResponse updateUser(UUID id, UpdateUserRequest request) {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
@@ -172,6 +178,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_USER_ROLES", entity = "ACCESS_CONTROL_USER", description = "Access control user roles update")
 	public UserDetailResponse updateUserRoles(UUID id, UpdateUserRolesRequest request) {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
@@ -183,6 +190,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_USER_STATUS", entity = "ACCESS_CONTROL_USER", description = "Access control user status update")
 	public UserDetailResponse updateUserStatus(UUID id, UpdateUserStatusRequest request) {
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
