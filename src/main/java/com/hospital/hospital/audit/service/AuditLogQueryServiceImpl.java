@@ -1,6 +1,7 @@
 package com.hospital.hospital.audit.service;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -45,16 +46,16 @@ public class AuditLogQueryServiceImpl implements AuditLogQueryService {
 			Instant occurredFrom,
 			Instant occurredTo,
 			Pageable pageable) {
-		Specification<AuditLog> specification = Specification
-				.where(equalsIgnoreCase("action", action))
-				.and(equalsIgnoreCase("entityName", entityName))
-				.and(equalsValue("status", status))
-				.and(equalsValue("actorUserId", actorUserId))
-				.and(equalsValue("actorRole", actorRole))
-				.and(containsIgnoreCase("requestPath", requestPath))
-				.and(equalsIgnoreCase("httpMethod", httpMethod))
-				.and(occurredAtFrom(occurredFrom))
-				.and(occurredAtTo(occurredTo));
+		Specification<AuditLog> specification = Specification.unrestricted();
+		specification = andIfPresent(specification, equalsIgnoreCase("action", action));
+		specification = andIfPresent(specification, equalsIgnoreCase("entityName", entityName));
+		specification = andIfPresent(specification, equalsValue("status", status));
+		specification = andIfPresent(specification, equalsValue("actorUserId", actorUserId));
+		specification = andIfPresent(specification, equalsValue("actorRole", actorRole));
+		specification = andIfPresent(specification, containsIgnoreCase("requestPath", requestPath));
+		specification = andIfPresent(specification, equalsIgnoreCase("httpMethod", httpMethod));
+		specification = andIfPresent(specification, occurredAtFrom(occurredFrom));
+		specification = andIfPresent(specification, occurredAtTo(occurredTo));
 		return auditLogRepository.findAll(specification, pageable).map(this::toSummaryResponse);
 	}
 
@@ -98,11 +99,18 @@ public class AuditLogQueryServiceImpl implements AuditLogQueryService {
 		return response;
 	}
 
+	private Specification<AuditLog> andIfPresent(Specification<AuditLog> base, Specification<AuditLog> next) {
+		if (next == null) {
+			return base;
+		}
+		return base.and(next);
+	}
+
 	private Specification<AuditLog> equalsIgnoreCase(String fieldName, String value) {
 		if (value == null || value.isBlank()) {
 			return null;
 		}
-		String normalized = value.trim().toLowerCase();
+		String normalized = value.trim().toLowerCase(Locale.ROOT);
 		return (root, query, criteriaBuilder) -> criteriaBuilder.equal(
 				criteriaBuilder.lower(root.get(fieldName)),
 				normalized);
@@ -112,7 +120,7 @@ public class AuditLogQueryServiceImpl implements AuditLogQueryService {
 		if (value == null || value.isBlank()) {
 			return null;
 		}
-		String normalized = "%" + value.trim().toLowerCase() + "%";
+		String normalized = "%" + value.trim().toLowerCase(Locale.ROOT) + "%";
 		return (root, query, criteriaBuilder) -> criteriaBuilder.like(
 				criteriaBuilder.lower(root.get(fieldName)),
 				normalized);
