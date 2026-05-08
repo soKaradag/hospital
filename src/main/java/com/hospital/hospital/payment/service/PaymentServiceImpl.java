@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.encounter.model.Encounter;
@@ -53,6 +54,7 @@ public class PaymentServiceImpl implements PaymentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_PAYMENT", entity = "PAYMENT", description = "Payment creation")
 	public PaymentResponse create(CreatePaymentRequest request) {
 		Payment payment = paymentMapper.toEntity(request);
 		Patient patient = getPatient(request.getPatientId());
@@ -67,6 +69,7 @@ public class PaymentServiceImpl implements PaymentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_PAYMENT", entity = "PAYMENT", description = "Payment update")
 	public PaymentResponse update(UUID id, UpdatePaymentRequest request) {
 		Payment payment = getPayment(id);
 		Patient patient = getPatient(request.getPatientId());
