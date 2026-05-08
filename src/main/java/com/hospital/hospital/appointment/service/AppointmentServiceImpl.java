@@ -20,6 +20,7 @@ import com.hospital.hospital.appointment.repository.AppointmentProcedureReposito
 import com.hospital.hospital.appointment.repository.AppointmentReminderRepository;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
 import com.hospital.hospital.appointment.repository.AppointmentStatusHistoryRepository;
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.doctor.model.Doctor;
@@ -106,6 +107,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 	*/
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_APPOINTMENT", entity = "APPOINTMENT", description = "Appointment creation")
 	public AppointmentResponse create(CreateAppointmentRequest request) {
 		validateAppointmentTime(request.getAppointmentDateTime());
 		Appointment appointment = appointmentMapper.toEntity(request);
@@ -119,6 +121,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_APPOINTMENT_WITH_PROCEDURE", entity = "APPOINTMENT", description = "Appointment creation through availability procedure")
 	public AppointmentResponse createWithProcedure(CreateAppointmentRequest request) {
 		validateAppointmentTime(request.getAppointmentDateTime());
 
@@ -148,6 +151,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_APPOINTMENT", entity = "APPOINTMENT", description = "Appointment update")
 	public AppointmentResponse update(UUID id, UpdateAppointmentRequest request) {
 		validateAppointmentTime(request.getAppointmentDateTime());
 		Appointment appointment = getAppointment(id);

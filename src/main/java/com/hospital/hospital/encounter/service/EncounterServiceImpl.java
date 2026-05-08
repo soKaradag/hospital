@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.hospital.appointment.model.Appointment;
 import com.hospital.hospital.appointment.repository.AppointmentRepository;
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.common.exception.BusinessRuleViolationException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.doctor.model.Doctor;
@@ -58,6 +59,7 @@ public class EncounterServiceImpl implements EncounterService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_ENCOUNTER", entity = "ENCOUNTER", description = "Encounter creation")
 	public EncounterResponse create(CreateEncounterRequest request) {
 		Encounter encounter = encounterMapper.toEntity(request);
 		Appointment appointment = getOptionalAppointment(request.getAppointmentId());
@@ -74,6 +76,7 @@ public class EncounterServiceImpl implements EncounterService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_ENCOUNTER", entity = "ENCOUNTER", description = "Encounter update")
 	public EncounterResponse update(UUID id, UpdateEncounterRequest request) {
 		Encounter encounter = getEncounter(id);
 		Appointment appointment = getOptionalAppointment(request.getAppointmentId());
