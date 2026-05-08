@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.common.exception.DuplicateResourceException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.patient.dto.CreatePatientRequest;
@@ -37,6 +38,7 @@ public class PatientServiceImpl implements PatientService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_PATIENT", entity = "PATIENT", description = "Patient creation")
 	public PatientResponse create(CreatePatientRequest request) {
 		validateNationalIdForCreate(request.getNationalId());
 		Patient patient = patientMapper.toEntity(request);
@@ -45,6 +47,7 @@ public class PatientServiceImpl implements PatientService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_PATIENT", entity = "PATIENT", description = "Patient update")
 	public PatientResponse update(UUID id, UpdatePatientRequest request) {
 		Patient patient = getPatient(id);
 		validateNationalIdForUpdate(id, request.getNationalId());

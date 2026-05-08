@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.auth.model.Role;
 import com.hospital.hospital.auth.model.User;
 import com.hospital.hospital.auth.repository.UserRepository;
@@ -52,6 +53,7 @@ public class DoctorServiceImpl implements DoctorService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_DOCTOR", entity = "DOCTOR", description = "Doctor creation")
 	public DoctorResponse create(CreateDoctorRequest request) {
 		Doctor doctor = doctorMapper.toEntity(request);
 		doctor.setDepartment(getDepartment(request.getDepartmentId()));
@@ -63,6 +65,7 @@ public class DoctorServiceImpl implements DoctorService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_DOCTOR", entity = "DOCTOR", description = "Doctor update")
 	public DoctorResponse update(UUID id, UpdateDoctorRequest request) {
 		Doctor doctor = getDoctor(id);
 		doctorMapper.updateEntity(request, doctor);
@@ -107,6 +110,7 @@ public class DoctorServiceImpl implements DoctorService {
 
 	@Override
 	@Transactional
+	@Audit(action = "DELETE_DOCTOR", entity = "DOCTOR", description = "Doctor soft delete")
 	public void delete(UUID id) {
 		Doctor doctor = getDoctor(id);
 		doctor.setActive(false);

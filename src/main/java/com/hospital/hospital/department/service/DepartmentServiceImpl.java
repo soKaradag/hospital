@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.hospital.audit.annotation.Audit;
 import com.hospital.hospital.common.exception.DuplicateResourceException;
 import com.hospital.hospital.common.exception.ResourceNotFoundException;
 import com.hospital.hospital.department.dto.CreateDepartmentRequest;
@@ -53,6 +54,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "CREATE_DEPARTMENT", entity = "DEPARTMENT", description = "Department creation")
 	public DepartmentResponse create(CreateDepartmentRequest request) {
 		if (departmentRepository.existsByName(request.getName())) {
 			throw new DuplicateResourceException("Department name already exists: " + request.getName());
@@ -64,6 +66,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "UPDATE_DEPARTMENT", entity = "DEPARTMENT", description = "Department update")
 	public DepartmentResponse update(UUID id, UpdateDepartmentRequest request) {
 		Department department = getDepartment(id);
 		departmentRepository.findByName(request.getName())
@@ -100,6 +103,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 
 	@Override
 	@Transactional
+	@Audit(action = "DELETE_DEPARTMENT", entity = "DEPARTMENT", description = "Department soft delete")
 	public void delete(UUID id) {
 		Department department = getDepartment(id);
 		department.setActive(false);
