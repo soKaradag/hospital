@@ -101,6 +101,7 @@ class ProcurementServiceImplTest {
 		warehouse.setId(warehouseId);
 		warehouse.setCode("MAIN");
 		warehouse.setName("Main Warehouse");
+		warehouse.setActive(true);
 
 		CreateGoodsReceiptRequest request = new CreateGoodsReceiptRequest();
 		request.setPurchaseOrderId(purchaseOrderId);
