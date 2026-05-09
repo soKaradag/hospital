@@ -130,6 +130,7 @@ public class DoctorServiceImpl implements DoctorService {
 	private void syncPrimarySpecialty(Doctor doctor, String specialization) {
 		String normalizedSpecialization = normalizeSpecialization(specialization);
 		doctorSpecialtyRepository.deleteAllByDoctorId(doctor.getId());
+		doctorSpecialtyRepository.flush();
 		if (normalizedSpecialization == null) {
 			return;
 		}
