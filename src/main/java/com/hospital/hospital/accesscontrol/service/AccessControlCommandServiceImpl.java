@@ -125,12 +125,31 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 			throw new BusinessRuleViolationException("Unknown permission code: " + missingCode);
 		}
 
-		rolePermissionRepository.deleteByRole_Id(role.getId());
+		Set<String> existingCodes = new LinkedHashSet<>(rolePermissionRepository.findPermissionCodesByRoleId(role.getId()));
 		for (Permission permission : permissions) {
+			if (existingCodes.contains(permission.getCode())) {
+				continue;
+			}
 			rolePermissionRepository.save(new RolePermission(role, permission));
 		}
 
 		return accessControlQueryService.getRoleById(role.getId());
+	}
+
+	@Override
+	@Transactional
+	public void deleteRole(UUID id) {
+		RoleEntity role = roleEntityRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Role not found: " + id));
+		if (role.isSystemRole()) {
+			throw new BusinessRuleViolationException("System roles cannot be deleted");
+		}
+		if (userRoleRepository.countByRole_Id(id) > 0) {
+			throw new BusinessRuleViolationException("Role cannot be deleted while assigned to users");
+		}
+
+		rolePermissionRepository.deleteByRole_Id(id);
+		roleEntityRepository.delete(role);
 	}
 
 	@Override
@@ -245,8 +264,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 				.map(role -> toLegacyRole(role.getCode()))
 				.filter(java.util.Objects::nonNull)
 				.findFirst()
-				.orElseThrow(() -> new BusinessRuleViolationException(
-						"At least one assigned system role is required during transition"));
+				.orElse(Role.CUSTOM);
 	}
 
 	private Role toLegacyRole(String roleCode) {

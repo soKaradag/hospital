@@ -40,12 +40,14 @@ public class WarehouseController {
 		this.warehouseService = warehouseService;
 	}
 
+	//Create Warehouse endpoint - POST /api/inventory/warehouses
 	@PostMapping
 	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
 	public ApiResponse<WarehouseResponse> create(@Valid @RequestBody CreateWarehouseRequest request) {
 		return ApiResponse.success("Warehouse created successfully", warehouseService.create(request));
 	}
 
+	//Update Warehouse endpoint - PUT /api/inventory/warehouses/{id}
 	@PutMapping("/{id}")
 	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
 	public ApiResponse<WarehouseResponse> update(
@@ -54,11 +56,13 @@ public class WarehouseController {
 		return ApiResponse.success("Warehouse updated successfully", warehouseService.update(id, request));
 	}
 
+	//Get Warehouse by ID endpoint - GET /api/inventory/warehouses/{id}
 	@GetMapping("/{id}")
 	public ApiResponse<WarehouseResponse> getById(@PathVariable UUID id) {
 		return ApiResponse.success("Warehouse retrieved successfully", warehouseService.getById(id));
 	}
 
+	//Get All Warehouses endpoint - GET /api/inventory/warehouses
 	@GetMapping
 	public ApiResponse<PageResponse<WarehouseResponse>> getAll(
 			@RequestParam(required = false) String search,
@@ -71,6 +75,7 @@ public class WarehouseController {
 		return ApiResponse.success("Warehouses retrieved successfully", PageResponse.from(warehouseService.getAll(pageable)));
 	}
 
+	//Create Warehouse Zone endpoint - POST /api/inventory/warehouses/{warehouseId}/zones
 	@PostMapping("/{warehouseId}/zones")
 	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
 	public ApiResponse<WarehouseZoneResponse> createZone(
@@ -79,6 +84,7 @@ public class WarehouseController {
 		return ApiResponse.success("Warehouse zone created successfully", warehouseService.createZone(warehouseId, request));
 	}
 
+	//Update Warehouse Zone endpoint - PUT /api/inventory/warehouses/{warehouseId}/zones/{zoneId}
 	@PutMapping("/{warehouseId}/zones/{zoneId}")
 	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
 	public ApiResponse<WarehouseZoneResponse> updateZone(
@@ -89,6 +95,7 @@ public class WarehouseController {
 				warehouseService.updateZone(warehouseId, zoneId, request));
 	}
 
+	//Get Warehouse Zone by ID endpoint - GET /api/inventory/warehouses/{warehouseId}/zones/{zoneId}
 	@GetMapping("/{warehouseId}/zones/{zoneId}")
 	public ApiResponse<WarehouseZoneResponse> getZoneById(
 			@PathVariable UUID warehouseId,
@@ -97,6 +104,7 @@ public class WarehouseController {
 				warehouseService.getZoneById(warehouseId, zoneId));
 	}
 
+	//Get All Warehouse Zones endpoint - GET /api/inventory/warehouses/{warehouseId}/zones
 	@GetMapping("/{warehouseId}/zones")
 	public ApiResponse<PageResponse<WarehouseZoneResponse>> getZones(
 			@PathVariable UUID warehouseId,

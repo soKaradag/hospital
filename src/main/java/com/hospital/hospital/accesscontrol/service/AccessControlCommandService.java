@@ -20,6 +20,8 @@ public interface AccessControlCommandService {
 
 	RoleDetailResponse updateRolePermissions(UUID id, UpdateRolePermissionsRequest request);
 
+	void deleteRole(UUID id);
+
 	UserDetailResponse createUser(CreateUserRequest request);
 
 	UserDetailResponse updateUser(UUID id, UpdateUserRequest request);

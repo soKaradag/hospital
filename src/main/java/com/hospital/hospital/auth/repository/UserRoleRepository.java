@@ -33,6 +33,8 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
 
 	long countByUser_Id(UUID userId);
 
+	long countByRole_Id(UUID roleId);
+
 	void deleteByUser_Id(UUID userId);
 
 	@Query("""

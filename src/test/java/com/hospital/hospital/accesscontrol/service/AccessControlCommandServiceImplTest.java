@@ -2,6 +2,9 @@ package com.hospital.hospital.accesscontrol.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -20,7 +23,11 @@ import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
+import com.hospital.hospital.accesscontrol.dto.UserDetailResponse;
+import com.hospital.hospital.auth.model.Permission;
+import com.hospital.hospital.auth.model.Role;
 import com.hospital.hospital.auth.model.RoleEntity;
+import com.hospital.hospital.auth.model.RolePermission;
 import com.hospital.hospital.auth.model.User;
 import com.hospital.hospital.auth.model.UserStatus;
 import com.hospital.hospital.auth.repository.PermissionRepository;
@@ -115,6 +122,33 @@ class AccessControlCommandServiceImplTest {
 	}
 
 	@Test
+	void updateRolePermissionsShouldKeepExistingPermissionsAndAddOnlyMissingOnes() {
+		UUID roleId = UUID.randomUUID();
+		RoleEntity role = new RoleEntity("CUSTOM_ROLE", "Custom role", null, false);
+		role.setId(roleId);
+
+		Permission existingPermission = new Permission("users.read", "Users Read", "Users");
+		Permission newPermission = new Permission("users.write", "Users Write", "Users");
+
+		UpdateRolePermissionsRequest request = new UpdateRolePermissionsRequest();
+		request.setPermissionCodes(List.of("users.read", "users.write"));
+
+		when(roleEntityRepository.findById(roleId)).thenReturn(Optional.of(role));
+		when(permissionRepository.findAllByCodeInOrderByCodeAsc(java.util.Set.of("users.read", "users.write")))
+				.thenReturn(List.of(existingPermission, newPermission));
+		when(rolePermissionRepository.findPermissionCodesByRoleId(roleId)).thenReturn(List.of("users.read"));
+		when(accessControlQueryService.getRoleById(roleId))
+				.thenReturn(new RoleDetailResponse(roleId, "CUSTOM_ROLE", "Custom role", null, false,
+						List.of("users.read", "users.write")));
+
+		RoleDetailResponse response = accessControlCommandService.updateRolePermissions(roleId, request);
+
+		assertEquals(roleId, response.getId());
+		verify(rolePermissionRepository, never()).deleteByRole_Id(roleId);
+		verify(rolePermissionRepository).save(any(RolePermission.class));
+	}
+
+	@Test
 	void createRoleShouldReturnCreatedRoleDetail() {
 		UUID roleId = UUID.randomUUID();
 		CreateRoleRequest request = new CreateRoleRequest();
@@ -155,7 +189,7 @@ class AccessControlCommandServiceImplTest {
 	}
 
 	@Test
-	void createUserShouldRequireAtLeastOneSystemRoleDuringTransition() {
+	void createUserShouldAllowCustomRoleOnlyByFallingBackToLegacyCustomRole() {
 		UUID roleId = UUID.randomUUID();
 		RoleEntity customRole = new RoleEntity("PROCUREMENT_MANAGER", "Procurement", null, false);
 		customRole.setId(roleId);
@@ -170,11 +204,19 @@ class AccessControlCommandServiceImplTest {
 
 		when(userRepository.existsByUsername("procurement1")).thenReturn(false);
 		when(roleEntityRepository.findAllById(java.util.Set.of(roleId))).thenReturn(List.of(customRole));
+		when(passwordHashService.hash("secret123")).thenReturn("hashed-secret");
+		when(userRepository.save(org.mockito.ArgumentMatchers.any(User.class))).thenAnswer(invocation -> {
+			User savedUser = invocation.getArgument(0);
+			savedUser.setId(UUID.randomUUID());
+			return savedUser;
+		});
+		when(userInfoRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(accessControlQueryService.getUserById(org.mockito.ArgumentMatchers.any()))
+				.thenReturn(new UserDetailResponse());
 
-		BusinessRuleViolationException exception = assertThrows(BusinessRuleViolationException.class,
-				() -> accessControlCommandService.createUser(request));
+		UserDetailResponse response = accessControlCommandService.createUser(request);
 
-		assertEquals("At least one assigned system role is required during transition", exception.getMessage());
+		org.junit.jupiter.api.Assertions.assertNotNull(response);
 	}
 
 	@Test
@@ -195,5 +237,49 @@ class AccessControlCommandServiceImplTest {
 				() -> accessControlCommandService.updateUserStatus(userId, request));
 
 		assertEquals("Last active admin user cannot be deactivated", exception.getMessage());
+	}
+
+	@Test
+	void deleteRoleShouldRejectSystemRoles() {
+		UUID roleId = UUID.randomUUID();
+		RoleEntity role = new RoleEntity("ADMIN", "Admin", null, true);
+		role.setId(roleId);
+
+		when(roleEntityRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+		BusinessRuleViolationException exception = assertThrows(BusinessRuleViolationException.class,
+				() -> accessControlCommandService.deleteRole(roleId));
+
+		assertEquals("System roles cannot be deleted", exception.getMessage());
+	}
+
+	@Test
+	void deleteRoleShouldRejectAssignedRoles() {
+		UUID roleId = UUID.randomUUID();
+		RoleEntity role = new RoleEntity("CUSTOM_ROLE", "Custom", null, false);
+		role.setId(roleId);
+
+		when(roleEntityRepository.findById(roleId)).thenReturn(Optional.of(role));
+		when(userRoleRepository.countByRole_Id(roleId)).thenReturn(1L);
+
+		BusinessRuleViolationException exception = assertThrows(BusinessRuleViolationException.class,
+				() -> accessControlCommandService.deleteRole(roleId));
+
+		assertEquals("Role cannot be deleted while assigned to users", exception.getMessage());
+	}
+
+	@Test
+	void deleteRoleShouldDeleteUnassignedCustomRole() {
+		UUID roleId = UUID.randomUUID();
+		RoleEntity role = new RoleEntity("CUSTOM_ROLE", "Custom", null, false);
+		role.setId(roleId);
+
+		when(roleEntityRepository.findById(roleId)).thenReturn(Optional.of(role));
+		when(userRoleRepository.countByRole_Id(roleId)).thenReturn(0L);
+
+		accessControlCommandService.deleteRole(roleId);
+
+		verify(rolePermissionRepository).deleteByRole_Id(roleId);
+		verify(roleEntityRepository).delete(role);
 	}
 }

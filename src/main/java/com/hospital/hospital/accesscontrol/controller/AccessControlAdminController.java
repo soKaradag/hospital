@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -92,6 +93,13 @@ public class AccessControlAdminController {
 			@Valid @RequestBody UpdateRolePermissionsRequest request) {
 		return ApiResponse.success("Access control role permissions updated successfully",
 				accessControlCommandService.updateRolePermissions(id, request));
+	}
+
+	@DeleteMapping("/roles/{id}")
+	@RequirePermission(PermissionCodes.ACCESS_CONTROL_ROLES_WRITE)
+	public ApiResponse<Void> deleteRole(@PathVariable UUID id) {
+		accessControlCommandService.deleteRole(id);
+		return ApiResponse.success("Access control role deleted successfully", null);
 	}
 
 	@GetMapping("/users")
