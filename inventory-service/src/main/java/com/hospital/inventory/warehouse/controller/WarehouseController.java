@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,6 +76,13 @@ public class WarehouseController {
 		return ApiResponse.success("Warehouses retrieved successfully", PageResponse.from(warehouseService.getAll(pageable)));
 	}
 
+	@DeleteMapping("/{id}")
+	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
+	public ApiResponse<Void> delete(@PathVariable UUID id) {
+		warehouseService.delete(id);
+		return ApiResponse.success("Warehouse deleted successfully", null);
+	}
+
 	//Create Warehouse Zone endpoint - POST /api/inventory/warehouses/{warehouseId}/zones
 	@PostMapping("/{warehouseId}/zones")
 	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
@@ -111,5 +119,14 @@ public class WarehouseController {
 			@PageableDefault(size = 20) Pageable pageable) {
 		return ApiResponse.success("Warehouse zones retrieved successfully",
 				PageResponse.from(warehouseService.getZones(warehouseId, pageable)));
+	}
+
+	@DeleteMapping("/{warehouseId}/zones/{zoneId}")
+	@RequirePermission(PermissionCodes.INVENTORY_WAREHOUSES_WRITE)
+	public ApiResponse<Void> deleteZone(
+			@PathVariable UUID warehouseId,
+			@PathVariable UUID zoneId) {
+		warehouseService.deleteZone(warehouseId, zoneId);
+		return ApiResponse.success("Warehouse zone deleted successfully", null);
 	}
 }

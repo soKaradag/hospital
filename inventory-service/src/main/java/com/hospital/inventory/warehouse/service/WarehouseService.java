@@ -24,6 +24,8 @@ public interface WarehouseService {
 
 	Page<WarehouseResponse> search(String keyword, Pageable pageable);
 
+	void delete(UUID id);
+
 	WarehouseZoneResponse createZone(UUID warehouseId, CreateWarehouseZoneRequest request);
 
 	WarehouseZoneResponse updateZone(UUID warehouseId, UUID zoneId, UpdateWarehouseZoneRequest request);
@@ -31,4 +33,6 @@ public interface WarehouseService {
 	WarehouseZoneResponse getZoneById(UUID warehouseId, UUID zoneId);
 
 	Page<WarehouseZoneResponse> getZones(UUID warehouseId, Pageable pageable);
+
+	void deleteZone(UUID warehouseId, UUID zoneId);
 }

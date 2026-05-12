@@ -7,8 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hospital.inventory.common.exception.BusinessRuleViolationException;
 import com.hospital.inventory.common.exception.DuplicateResourceException;
 import com.hospital.inventory.common.exception.ResourceNotFoundException;
+import com.hospital.inventory.stock.repository.StockBatchRepository;
 import com.hospital.inventory.warehouse.dto.CreateWarehouseRequest;
 import com.hospital.inventory.warehouse.dto.CreateWarehouseZoneRequest;
 import com.hospital.inventory.warehouse.dto.UpdateWarehouseRequest;
@@ -26,14 +28,17 @@ public class WarehouseServiceImpl implements WarehouseService {
 
 	private final WarehouseRepository warehouseRepository;
 	private final WarehouseZoneRepository warehouseZoneRepository;
+	private final StockBatchRepository stockBatchRepository;
 	private final WarehouseMapper warehouseMapper;
 
 	public WarehouseServiceImpl(
 			WarehouseRepository warehouseRepository,
 			WarehouseZoneRepository warehouseZoneRepository,
+			StockBatchRepository stockBatchRepository,
 			WarehouseMapper warehouseMapper) {
 		this.warehouseRepository = warehouseRepository;
 		this.warehouseZoneRepository = warehouseZoneRepository;
+		this.stockBatchRepository = stockBatchRepository;
 		this.warehouseMapper = warehouseMapper;
 	}
 
@@ -87,6 +92,17 @@ public class WarehouseServiceImpl implements WarehouseService {
 
 	@Override
 	@Transactional
+	public void delete(UUID id) {
+		Warehouse warehouse = getWarehouse(id);
+		if (stockBatchRepository.countByWarehouse_IdAndActiveTrue(id) > 0) {
+			throw new BusinessRuleViolationException("Warehouse with active stock batches cannot be deleted");
+		}
+		warehouse.setActive(false);
+		warehouseRepository.save(warehouse);
+	}
+
+	@Override
+	@Transactional
 	public WarehouseZoneResponse createZone(UUID warehouseId, CreateWarehouseZoneRequest request) {
 		Warehouse warehouse = getWarehouse(warehouseId);
 		if (warehouseZoneRepository.existsByWarehouseIdAndCodeIgnoreCase(warehouseId, request.getCode().trim())) {
@@ -123,6 +139,17 @@ public class WarehouseServiceImpl implements WarehouseService {
 	public Page<WarehouseZoneResponse> getZones(UUID warehouseId, Pageable pageable) {
 		getWarehouse(warehouseId);
 		return warehouseZoneRepository.findAllByWarehouseId(warehouseId, pageable).map(warehouseMapper::toResponse);
+	}
+
+	@Override
+	@Transactional
+	public void deleteZone(UUID warehouseId, UUID zoneId) {
+		WarehouseZone zone = getZone(warehouseId, zoneId);
+		if (stockBatchRepository.countByWarehouseZone_IdAndActiveTrue(zoneId) > 0) {
+			throw new BusinessRuleViolationException("Warehouse zone with active stock batches cannot be deleted");
+		}
+		zone.setActive(false);
+		warehouseZoneRepository.save(zone);
 	}
 
 	private Warehouse getWarehouse(UUID id) {

@@ -52,6 +52,10 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, UUID> {
 
 	List<StockBatch> findAllByInventoryItemIdAndActiveTrueOrderByExpiresAtAscBatchNumberAsc(UUID inventoryItemId);
 
+	long countByWarehouse_IdAndActiveTrue(UUID warehouseId);
+
+	long countByWarehouseZone_IdAndActiveTrue(UUID warehouseZoneId);
+
 	@Query("""
 			select coalesce(sum(batch.quantityOnHand), 0)
 			from StockBatch batch
