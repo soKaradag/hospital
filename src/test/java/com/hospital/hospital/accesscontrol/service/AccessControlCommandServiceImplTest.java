@@ -23,6 +23,7 @@ import com.hospital.hospital.accesscontrol.dto.CreateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
+import com.hospital.hospital.accesscontrol.dto.UpdateUserPasswordRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
 import com.hospital.hospital.accesscontrol.dto.UserDetailResponse;
@@ -264,6 +265,24 @@ class AccessControlCommandServiceImplTest {
 		inOrder.verify(userRoleRepository).deleteByUser_Id(userId);
 		inOrder.verify(userRoleRepository).flush();
 		inOrder.verify(userRoleRepository).save(any(com.hospital.hospital.auth.model.UserRole.class));
+	}
+
+	@Test
+	void updateUserPasswordShouldHashAndStoreNewPassword() {
+		UUID userId = UUID.randomUUID();
+		User user = new User("doctor1", "old-hash", Role.DOCTOR);
+		user.setId(userId);
+
+		UpdateUserPasswordRequest request = new UpdateUserPasswordRequest();
+		request.setNewPassword("newsecret");
+
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(passwordHashService.hash("newsecret")).thenReturn("new-hash");
+		when(accessControlQueryService.getUserById(userId)).thenReturn(new UserDetailResponse());
+
+		accessControlCommandService.updateUserPassword(userId, request);
+
+		assertEquals("new-hash", user.getPasswordHash());
 	}
 
 	@Test

@@ -22,6 +22,7 @@ import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.RoleSummaryResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
+import com.hospital.hospital.accesscontrol.dto.UpdateUserPasswordRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
@@ -129,6 +130,14 @@ public class AccessControlAdminController {
 			@Valid @RequestBody UpdateUserRequest request) {
 		return ApiResponse.success("Access control user updated successfully",
 				accessControlCommandService.updateUser(id, request));
+	}
+
+	@PutMapping("/users/{id}/password")
+	@RequirePermission(PermissionCodes.ACCESS_CONTROL_USERS_WRITE)
+	public ApiResponse<UserDetailResponse> updateUserPassword(@PathVariable UUID id,
+			@Valid @RequestBody UpdateUserPasswordRequest request) {
+		return ApiResponse.success("Access control user password updated successfully",
+				accessControlCommandService.updateUserPassword(id, request));
 	}
 
 	@PutMapping("/users/{id}/roles")

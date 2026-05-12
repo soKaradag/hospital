@@ -7,6 +7,7 @@ import com.hospital.hospital.accesscontrol.dto.CreateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
+import com.hospital.hospital.accesscontrol.dto.UpdateUserPasswordRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
@@ -25,6 +26,8 @@ public interface AccessControlCommandService {
 	UserDetailResponse createUser(CreateUserRequest request);
 
 	UserDetailResponse updateUser(UUID id, UpdateUserRequest request);
+
+	UserDetailResponse updateUserPassword(UUID id, UpdateUserPasswordRequest request);
 
 	UserDetailResponse updateUserRoles(UUID id, UpdateUserRolesRequest request);
 

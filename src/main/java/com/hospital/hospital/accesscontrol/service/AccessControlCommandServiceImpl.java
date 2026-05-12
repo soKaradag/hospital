@@ -13,6 +13,7 @@ import com.hospital.hospital.accesscontrol.dto.CreateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
+import com.hospital.hospital.accesscontrol.dto.UpdateUserPasswordRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
@@ -192,6 +193,16 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 		userInfo.setLastName(request.getLastName().trim());
 		userInfo.setContact(buildContact(request.getPhoneCountryCode(), request.getPhoneNumber(), request.getEmail()));
 		userInfoRepository.save(userInfo);
+		return accessControlQueryService.getUserById(id);
+	}
+
+	@Override
+	@Transactional
+	@Audit(action = "UPDATE_ACCESS_CONTROL_USER_PASSWORD", entity = "ACCESS_CONTROL_USER", description = "Access control user password reset")
+	public UserDetailResponse updateUserPassword(UUID id, UpdateUserPasswordRequest request) {
+		User user = userRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+		user.setPasswordHash(passwordHashService.hash(request.getNewPassword()));
 		return accessControlQueryService.getUserById(id);
 	}
 
