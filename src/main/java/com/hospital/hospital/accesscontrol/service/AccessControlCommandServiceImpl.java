@@ -294,6 +294,7 @@ public class AccessControlCommandServiceImpl implements AccessControlCommandServ
 
 	private void replaceUserRoles(User user, List<RoleEntity> roles, UUID primaryRoleId) {
 		userRoleRepository.deleteByUser_Id(user.getId());
+		userRoleRepository.flush();
 		for (RoleEntity role : roles) {
 			userRoleRepository.save(new UserRole(user, role, role.getId().equals(primaryRoleId)));
 		}

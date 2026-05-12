@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,6 +23,7 @@ import com.hospital.hospital.accesscontrol.dto.CreateUserRequest;
 import com.hospital.hospital.accesscontrol.dto.RoleDetailResponse;
 import com.hospital.hospital.accesscontrol.dto.UpdateRolePermissionsRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateRoleRequest;
+import com.hospital.hospital.accesscontrol.dto.UpdateUserRolesRequest;
 import com.hospital.hospital.accesscontrol.dto.UpdateUserStatusRequest;
 import com.hospital.hospital.accesscontrol.dto.UserDetailResponse;
 import com.hospital.hospital.auth.model.Permission;
@@ -237,6 +239,31 @@ class AccessControlCommandServiceImplTest {
 				() -> accessControlCommandService.updateUserStatus(userId, request));
 
 		assertEquals("Last active admin user cannot be deactivated", exception.getMessage());
+	}
+
+	@Test
+	void updateUserRolesShouldFlushDeletedRolesBeforeReassigning() {
+		UUID userId = UUID.randomUUID();
+		UUID roleId = UUID.randomUUID();
+		User user = new User("doctor1", "hash", Role.DOCTOR);
+		user.setId(userId);
+		RoleEntity role = new RoleEntity("DOCTOR", "Doctor", null, true);
+		role.setId(roleId);
+
+		UpdateUserRolesRequest request = new UpdateUserRolesRequest();
+		request.setRoleIds(List.of(roleId));
+		request.setPrimaryRoleId(roleId);
+
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(roleEntityRepository.findAllById(java.util.Set.of(roleId))).thenReturn(List.of(role));
+		when(accessControlQueryService.getUserById(userId)).thenReturn(new UserDetailResponse());
+
+		accessControlCommandService.updateUserRoles(userId, request);
+
+		InOrder inOrder = org.mockito.Mockito.inOrder(userRoleRepository);
+		inOrder.verify(userRoleRepository).deleteByUser_Id(userId);
+		inOrder.verify(userRoleRepository).flush();
+		inOrder.verify(userRoleRepository).save(any(com.hospital.hospital.auth.model.UserRole.class));
 	}
 
 	@Test
